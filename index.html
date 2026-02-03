@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scientific Nexus | Research Terminal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { 
+            --cyan: #00f2ff; 
+            --purple: #bc13fe; 
+            --dark: #050507; 
+            --panel: #0f0f13;
+            --border: rgba(255,255,255,0.08);
+            --header-h: 70px;
+            --glass: rgba(15, 15, 19, 0.95);
+            --danger: #ff4444; 
+            --success: #00ff88;
+        }
+        
+        * { 
+            box-sizing: border-box; outline: none; 
+            -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+        }
+        input, textarea { user-select: text !important; -webkit-user-select: text !important; }
+
+        body { 
+            background: var(--dark); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; padding: 0; overflow: hidden; height: 100vh;
+        }
+
+        /* --- UI LAYOUT --- */
+        #app-container { display: flex; height: 100vh; width: 100vw; }
+        
+        /* SIDEBAR */
+        #sidebar {
+            width: 80px; background: var(--panel); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; padding-top: 20px; z-index: 10;
+        }
+        .nav-icon {
+            width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: #666; cursor: pointer; transition: 0.3s; margin-bottom: 15px;
+        }
+        .nav-icon:hover, .nav-icon.active { background: rgba(0, 242, 255, 0.1); color: var(--cyan); box-shadow: 0 0 15px rgba(0,242,255,0.2); }
+
+        /* MAIN AREA */
+        #main-view { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* HEADER */
+        header {
+            height: var(--header-h); border-bottom: 1px solid var(--border); display: flex; align-items: center; 
+            justify-content: space-between; padding: 0 25px; background: var(--glass); backdrop-filter: blur(10px);
+        }
+        .logo { font-weight: 700; font-size: 1.2rem; letter-spacing: 1px; color: white; }
+        .logo span { color: var(--cyan); }
+        .user-chip { 
+            background: rgba(255,255,255,0.05); padding: 6px 15px; border-radius: 20px; 
+            font-size: 0.85rem; border: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
+        }
+        .status-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); }
+
+        /* CONTENT PAGES */
+        .page { display: none; width: 100%; height: calc(100% - var(--header-h)); overflow-y: auto; padding: 20px; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- AUTH SCREEN --- */
+        #auth-screen {
+            position: fixed; inset: 0; background: var(--dark); z-index: 999; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .auth-box {
+            width: 350px; padding: 40px; background: var(--panel); border: 1px solid var(--border);
+            border-radius: 16px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .auth-btn {
+            background: linear-gradient(45deg, var(--cyan), var(--purple)); border: none; padding: 12px 0;
+            width: 100%; color: white; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 20px;
+        }
+
+        /* --- GAMES STYLES --- */
+        #game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding-bottom: 50px; }
+        .game-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: 0.3s; cursor: pointer; position: relative; }
+        .game-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-color: var(--cyan); }
+        .gc-thumb { width: 100%; height: 140px; background: #222; object-fit: cover; }
+        .gc-info { padding: 15px; }
+        .gc-title { font-weight: 600; margin-bottom: 5px; color: #fff; }
+        .gc-cat { font-size: 0.75rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- CHAT STYLES --- */
+        .chat-layout { display: flex; height: 100%; gap: 20px; }
+        .chat-list-panel { width: 300px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+        .chat-header { padding: 15px; border-bottom: 1px solid var(--border); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .add-friend-btn { font-size: 0.8rem; background: rgba(0,242,255,0.1); color: var(--cyan); padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+        
+        .chat-items { flex: 1; overflow-y: auto; }
+        .chat-item { 
+            padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; 
+            display: flex; align-items: center; gap: 12px;
+        }
+        .chat-item:hover { background: rgba(255,255,255,0.03); }
+        .avatar { 
+            width: 40px; height: 40px; background: linear-gradient(135deg, #333, #111); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--cyan); border: 1px solid var(--border); overflow: hidden;
+        }
+        
+        .chat-window { flex: 1; background: var(--panel); border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .cw-header { padding: 15px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .cw-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .cw-input { padding: 15px; background: rgba(0,0,0,0.2); display: flex; gap: 10px; border-top: 1px solid var(--border); }
+        .cw-input input { 
+            flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white; 
+            padding: 10px 15px; border-radius: 8px; 
+        }
+        .cw-input button { 
+            width: 45px; background: var(--cyan); border: none; border-radius: 8px; color: var(--dark); cursor: pointer; 
+        }
+
+        .msg { max-width: 70%; padding: 10px 15px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; word-wrap: break-word; }
+        .msg.me { align-self: flex-end; background: rgba(0, 242, 255, 0.15); border: 1px solid rgba(0,242,255,0.2); color: #ccfcff; border-bottom-right-radius: 2px; }
+        .msg.them { align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-bottom-left-radius: 2px; }
+
+        /* MODALS */
+        .modal { 
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; 
+            align-items: center; justify-content: center; backdrop-filter: blur(5px);
+        }
+        .modal-content { 
+            width: 400px; background: var(--panel); padding: 25px; border-radius: 12px; border: 1px solid var(--border); 
+            box-shadow: 0 0 30px rgba(0,242,255,0.1);
+        }
+        .modal input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 6px; margin: 15px 0; }
+
+        /* GAME VIEWER */
+        #game-viewer { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; opacity: 0; transition: opacity 0.3s; }
+        #game-viewer.active { opacity: 1; }
+        .gv-bar { height: 50px; background: #111; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #333; }
+        .gv-close { color: #fff; cursor: pointer; font-size: 1.5rem; }
+        #game-frame { width: 100%; height: calc(100% - 50px); border: none; background: #000; }
+        
+        /* UTILS */
+        .hidden { display: none !important; }
+        #loader { position: fixed; inset: 0; background: var(--dark); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s; }
+    </style>
+</head>
+<body>
+
+    <div id="loader"><div class="logo">INITIALIZING...</div></div>
+
+    <div id="auth-screen">
+        <div class="auth-box">
+            <div class="logo" style="margin-bottom: 20px; font-size: 1.5rem;">SCIENTIFIC <span>NEXUS</span></div>
+            <p style="color: #888; margin-bottom: 20px;">Secure Research Terminal Access</p>
+            <button class="auth-btn" onclick="googleLogin()"><i class="fab fa-google"></i> &nbsp; Authenticate</button>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <div id="sidebar">
+            <div class="nav-icon" onclick="showPage('games')"><i class="fas fa-gamepad"></i></div>
+            <div class="nav-icon active" onclick="showPage('allies')"><i class="fas fa-user-friends"></i></div>
+            <div style="flex:1"></div>
+            <div class="nav-icon" style="color: var(--danger)" onclick="logout()"><i class="fas fa-power-off"></i></div>
+        </div>
+
+        <div id="main-view">
+            <header>
+                <div class="logo">SCIENTIFIC <span>NEXUS</span></div>
+                <div class="user-chip">
+                    <div class="status-dot"></div>
+                    <span id="current-username">Operative</span>
+                    <span id="my-friend-code" style="opacity: 0.5; font-size: 0.75rem; border-left: 1px solid #444; padding-left: 8px; margin-left: 5px;">#0000</span>
+                </div>
+            </header>
+
+            <div id="page-games" class="page">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h2>Module: Simulations</h2>
+                    <input type="text" id="search-input" placeholder="Search Database..." onkeyup="filterGames()" style="background:#111; border:1px solid #333; color:white; padding:8px 15px; border-radius:20px;">
+                </div>
+                <div id="game-grid">
+                    </div>
+            </div>
+
+            <div id="page-allies" class="page active">
+                <div class="chat-layout">
+                    <div class="chat-list-panel">
+                        <div class="chat-header">
+                            <span>Active Allies</span>
+                            <div class="add-friend-btn" onclick="openAddModal()">+ ADD</div>
+                        </div>
+                        <div class="chat-items" id="friends-list">
+                            </div>
+                    </div>
+
+                    <div class="chat-window">
+                        <div class="cw-header" id="chat-header">
+                            <div class="avatar" id="active-avatar">?</div>
+                            <span id="active-chat-name">Select an ally to communicate</span>
+                        </div>
+                        <div class="cw-messages" id="message-feed">
+                            </div>
+                        <div class="cw-input">
+                            <input type="text" id="msg-input" placeholder="Encrypted transmission..." onkeypress="handleEnter(event)">
+                            <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-add" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0">Establish Uplink</h3>
+            <p style="font-size: 0.9rem; color: #888;">Enter target operative's Friend Code.</p>
+            <input type="text" id="friend-code-input" placeholder="e.g. 83921">
+            <div style="display:flex; gap: 10px;">
+                <button class="auth-btn" style="margin:0; background: #333;" onclick="document.getElementById('modal-add').style.display='none'">Cancel</button>
+                <button class="auth-btn" style="margin:0;" onclick="executeAddFriend()">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-viewer">
+        <div class="gv-bar">
+            <div>
+                <span id="gv-title" style="font-weight:bold; margin-right:10px"></span>
+                <span id="gv-cat" style="font-size:0.8rem; color:var(--cyan)"></span>
+            </div>
+            <div style="display:flex; gap:15px; align-items:center;">
+                <i class="fas fa-expand" onclick="toggleFull()" style="color:#fff; cursor:pointer"></i>
+                <i class="fas fa-times gv-close" onclick="closeGame()"></i>
+            </div>
+        </div>
+        <div id="gf-wrapper" style="width:100%; height:calc(100% - 50px);">
+            <iframe id="game-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- CONFIGURATION ---
+        const firebaseConfig = {
+            // PASTE YOUR KEYS HERE
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        let currentUser = null;
+        let activeChatId = null;
+        let unsubscribeMessages = null;
+
+        // --- AUTH ---
+        function googleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(e => alert(e.message));
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('app-container').classList.remove('hidden');
+                setupProfile();
+                loadFriends();
+                if(gameData.length === 0) loadGames(); // Load games if not loaded
+            } else {
+                document.getElementById('auth-screen').style.display = 'flex';
+            }
+        });
+
+        function logout() { auth.signOut().then(() => location.reload()); }
+
+        // --- PROFILE ---
+        async function setupProfile() {
+            const userRef = db.collection('users').doc(currentUser.uid);
+            const doc = await userRef.get();
+            if (!doc.exists) {
+                const code = Math.floor(10000 + Math.random() * 90000).toString();
+                await userRef.set({
+                    uid: currentUser.uid,
+                    name: currentUser.displayName,
+                    email: currentUser.email,
+                    photo: currentUser.photoURL,
+                    friendCode: code,
+                    friends: [] 
+                });
+                await db.collection('friend_codes').doc(code).set({ uid: currentUser.uid });
+            }
+            const userData = (await userRef.get()).data();
+            document.getElementById('current-username').innerText = userData.name.split(' ')[0].toUpperCase();
+            document.getElementById('my-friend-code').innerText = '#' + userData.friendCode;
+        }
+
+        // --- FRIEND LOGIC (FIXED) ---
+        function loadFriends() {
+            db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+                const data = doc.data();
+                const list = document.getElementById('friends-list');
+                
+                // IMPORTANT: We do NOT clear list immediately to avoid flashing, 
+                // but we check for duplicates before adding.
+                if (data && data.friends && data.friends.length > 0) {
+                    // If the list was empty or showing "No allies", clear it first
+                    if(list.innerText.includes("No active allies")) list.innerHTML = '';
+
+                    data.friends.forEach(friendUid => {
+                        // FIX: Only fetch and render if we haven't already rendered this friend
+                        if (!document.getElementById(`friend-item-${friendUid}`)) {
+                            db.collection('users').doc(friendUid).get().then(fDoc => {
+                                if (fDoc.exists) {
+                                    renderFriendItem(fDoc.data());
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    list.innerHTML = '<div style="padding:20px; color:#666; font-size:0.8rem; text-align:center">No active allies.</div>';
+                }
+            });
+        }
+
+        function renderFriendItem(friend) {
+            // FIX: Double check duplicate before appending to UI
+            if (document.getElementById(`friend-item-${friend.uid}`)) return;
+
+            const div = document.createElement('div');
+            div.className = 'chat-item';
+            div.id = `friend-item-${friend.uid}`;
+            div.onclick = () => openChat(friend);
+            div.innerHTML = `
+                <div class="avatar"><img src="${friend.photo}" style="width:100%; height:100%; border-radius:50%"></div>
+                <div style="flex:1">
+                    <div style="font-size:0.95rem; font-weight:600">${friend.name}</div>
+                    <div style="font-size:0.75rem; color:#888">Online</div>
+                </div>
+            `;
+            document.getElementById('friends-list').appendChild(div);
+        }
+
+        function openAddModal() { document.getElementById('modal-add').style.display = 'flex'; }
+
+        async function executeAddFriend() {
+            const code = document.getElementById('friend-code-input').value.trim();
+            if (!code) return;
+
+            try {
+                // 1. Get UID from Code
+                const codeDoc = await db.collection('friend_codes').doc(code).get();
+                if (!codeDoc.exists) { alert("Invalid Operative Code."); return; }
+                const targetUid = codeDoc.data().uid;
+                
+                if (targetUid === currentUser.uid) { alert("Cannot add self."); return; }
+
+                // 2. INSTANT ADD (Both sides)
+                // Add target to my list
+                await db.collection('users').doc(currentUser.uid).update({
+                    friends: firebase.firestore.FieldValue.arrayUnion(targetUid)
+                });
+                // Add me to target's list (Allowed by new rules)
+                await db.collection('users').doc(targetUid).update({
+                    friends: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+                });
+
+                document.getElementById('modal-add').style.display = 'none';
+                document.getElementById('friend-code-input').value = '';
+                alert("Link Established!");
+            } catch (e) {
+                console.error(e);
+                alert("Connection failed: " + e.message);
+            }
+        }
+
+        // --- CHAT SYSTEM (FIXED) ---
+        // FIX: Generates a consistent ID like "uidA_uidB" (alphabetically sorted)
+        // This ensures both users ALWAYS talk in the same room.
+        function getCanonicalChatId(uid1, uid2) {
+            return [uid1, uid2].sort().join('_');
+        }
+
+        async function openChat(friend) {
+            // FIX: Use the unique ID logic
+            activeChatId = getCanonicalChatId(currentUser.uid, friend.uid);
+            
+            // UI Updates
+            document.getElementById('active-avatar').innerHTML = `<img src="${friend.photo}" style="width:100%; height:100%; border-radius:50%">`;
+            document.getElementById('active-chat-name').innerText = friend.name;
+
+            // Ensure chat exists
+            const chatRef = db.collection('chats').doc(activeChatId);
+            const chatDoc = await chatRef.get();
+            if (!chatDoc.exists) {
+                await chatRef.set({
+                    users: [currentUser.uid, friend.uid],
+                    created: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+
+            // Load Messages
+            loadMessages();
+        }
+
+        function loadMessages() {
+            if (unsubscribeMessages) unsubscribeMessages();
+
+            const feed = document.getElementById('message-feed');
+            feed.innerHTML = ''; 
+
+            unsubscribeMessages = db.collection('chats').doc(activeChatId)
+                .collection('messages')
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === "added") {
+                            renderMessage(change.doc.data());
+                        }
+                    });
+                    feed.scrollTop = feed.scrollHeight;
+                });
+        }
+
+        function renderMessage(msgData) {
+            const div = document.createElement('div');
+            const isMe = msgData.senderId === currentUser.uid;
+            div.className = `msg ${isMe ? 'me' : 'them'}`;
+            div.innerText = msgData.text;
+            document.getElementById('message-feed').appendChild(div);
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+
+        async function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if (!text || !activeChatId) return;
+
+            input.value = ''; // Instant clear
+
+            try {
+                await db.collection('chats').doc(activeChatId).collection('messages').add({
+                    text: text,
+                    senderId: currentUser.uid,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (e) {
+                console.error("Send failed", e);
+            }
+        }
+
+        // --- GAME LOGIC (PRESERVED) ---
+        // I have kept this exactly as you had it so your games work.
+        const gameData = [
+            { title: "Neon Racer", cat: "Racing", img: "https://via.placeholder.com/300x200/00f2ff/000?text=Racer", url: "https://itch.io/embed-upload/123456?color=333333" },
+            { title: "Cyber Puzzle", cat: "Logic", img: "https://via.placeholder.com/300x200/bc13fe/000?text=Puzzle", url: "https://html5games.com/" },
+            { title: "Space Defense", cat: "Action", img: "https://via.placeholder.com/300x200/ff4444/000?text=Space", url: "https://poki.com/" }
+            // Add more games here
+        ];
+
+        function loadGames() {
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = '';
+            gameData.forEach(g => {
+                grid.appendChild(createCard(g));
+            });
+        }
+
+        function createCard(g) {
+            const div = document.createElement('div');
+            div.className = 'game-card';
+            div.onclick = () => openGame(g.url, g.title, g.cat);
+            div.innerHTML = `
+                <img src="${g.img}" class="gc-thumb">
+                <div class="gc-info">
+                    <div class="gc-title">${g.title}</div>
+                    <div class="gc-cat">${g.cat}</div>
+                </div>
+            `;
+            return div;
+        }
+
+        function filterGames() {
+            const q = document.getElementById('search-input').value.toLowerCase();
+            const grid = document.getElementById('game-grid'); 
+            grid.innerHTML = '';
+            gameData.filter(g => g.title.toLowerCase().includes(q)).forEach(g => grid.appendChild(createCard(g)));
+        }
+
+        function openGame(url, title, cat) {
+            const gv = document.getElementById('game-viewer');
+            gv.style.display = 'block'; setTimeout(() => gv.classList.add('active'), 10);
+            document.getElementById('game-frame').src = url;
+            document.getElementById('gv-title').innerText = title;
+            document.getElementById('gv-cat').innerText = cat;
+        }
+
+        function closeGame() {
+            const gv = document.getElementById('game-viewer'); gv.classList.remove('active');
+            setTimeout(() => { gv.style.display = 'none'; document.getElementById('game-frame').src = ""; }, 300);
+        }
+
+        function toggleFull() {
+            const el = document.getElementById('gf-wrapper');
+            !document.fullscreenElement ? el.requestFullscreen().catch(e=>console.log(e)) : document.exitFullscreen();
+        }
+
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-icon').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + id).classList.add('active');
+            if(id === 'allies') document.querySelectorAll('.nav-icon')[1].classList.add('active');
+            if(id === 'games') document.querySelectorAll('.nav-icon')[0].classList.add('active');
+        }
+
+        window.onload = () => { 
+            document.getElementById('loader').style.opacity = '0'; 
+            setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+        };
+    </script>
+</body>
+</html>
