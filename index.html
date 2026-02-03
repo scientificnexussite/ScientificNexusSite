@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scientific Nexus | Research Terminal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { 
+            --cyan: #00f2ff; 
+            --purple: #bc13fe; 
+            --dark: #050507; 
+            --panel: #0f0f13;
+            --border: rgba(255,255,255,0.08);
+            --header-h: 70px;
+            --glass: rgba(15, 15, 19, 0.95); /* Slightly darker for better chat readability */
+        }
+        
+        * { 
+            box-sizing: border-box; outline: none; 
+            -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+        }
+        input, textarea { user-select: text !important; -webkit-user-select: text !important; }
+
+        body { 
+            background: var(--dark); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; overflow-x: hidden;
+        }
+
+        /* --- LOADER --- */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark);
+            z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 3px solid rgba(0, 242, 255, 0.2); 
+            border-top: 3px solid var(--cyan); border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- HEADER --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 5%; background: rgba(5,5,7,0.95); backdrop-filter: blur(10px);
+            position: fixed; width: 100%; top: 0; z-index: 1000; border-bottom: 1px solid var(--border);
+            height: var(--header-h);
+        }
+        .logo { 
+            font-weight: 800; color: var(--cyan); letter-spacing: 1px; font-size: 1.1rem; 
+            text-transform: uppercase; display: flex; align-items: center; gap: 8px; cursor: pointer;
+        }
+        .user-nav { display: flex; align-items: center; gap: 15px; }
+        .auth-btn {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+        }
+        .auth-btn:hover { border-color: var(--cyan); background: rgba(0, 242, 255, 0.1); }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--cyan); object-fit: cover; }
+
+        /* --- MAIN LAYOUT --- */
+        #app-content { padding-top: var(--header-h); min-height: 100vh; transition: transform 0.3s ease; }
+        
+        .hero {
+            padding: 60px 20px 40px; text-align: center;
+            background: radial-gradient(circle at 50% 0%, #130821 0%, var(--dark) 80%);
+            opacity: 0; transform: translateY(30px); transition: all 0.8s ease; 
+        }
+        .hero.reveal { opacity: 1; transform: translateY(0); }
+        .hero h1 {
+            font-size: 2.5rem; margin: 0;
+            background: linear-gradient(to right, #fff, var(--cyan)); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .controls { max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; }
+        
+        .search-bar {
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+            padding: 12px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .search-bar:focus-within {
+            transform: scale(1.02); border-color: var(--cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+        }
+        .search-bar i { color: #666; transition: all 0.4s; }
+        .search-bar:focus-within i { color: var(--cyan); transform: rotate(90deg) scale(1.2); }
+        .search-bar input { background: transparent; border: none; color: white; width: 100%; font-size: 1rem; }
+        
+        .categories { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .cat-btn {
+            background: #1a1a20; color: #888; border: 1px solid var(--border); padding: 8px 16px; 
+            border-radius: 20px; white-space: nowrap; cursor: pointer; font-size: 0.9rem; transition: 0.3s;
+        }
+        .cat-btn.active { background: var(--cyan); color: black; border-color: var(--cyan); font-weight: bold; }
+
+        .grid { 
+            display: grid; gap: 15px; padding: 0 20px 50px; max-width: 1200px; margin: 0 auto;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+        }
+        @media (max-width: 480px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 10px 50px; } }
+
+        .card { 
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+            position: relative; cursor: pointer;
+            opacity: 0; transform: translateY(50px) scale(0.95);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .card.reveal { opacity: 1; transform: translateY(0) scale(1); } 
+        .card:hover { transform: translateY(-5px) !important; border-color: var(--cyan); }
+        .thumb { height: 120px; width: 100%; object-fit: cover; }
+        .card-body { padding: 10px; }
+        .card-title { margin: 0; font-size: 0.9rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-cat { color: #666; font-size: 0.75rem; margin-top: 4px; display: block;}
+
+        /* --- GAME PLAYER --- */
+        #game-viewer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--dark); z-index: 5000; overflow-y: auto;
+            display: none; opacity: 0; transition: opacity 0.3s ease;
+        }
+        #game-viewer.active { opacity: 1; }
+
+        .gv-nav {
+            height: 60px; display: flex; align-items: center; padding: 0 20px;
+            border-bottom: 1px solid var(--border); background: var(--panel);
+            position: sticky; top: 0; z-index: 5001;
+        }
+        .back-btn { 
+            background: transparent; border: none; color: white; font-size: 1.2rem; cursor: pointer; 
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .gv-layout {
+            display: grid; 
+            grid-template-columns: 180px minmax(300px, 1fr) 180px;
+            gap: 20px; max-width: 1600px; margin: 20px auto; padding: 0 20px;
+            align-items: start;
+        }
+
+        .gv-sidebar { display: flex; flex-direction: column; gap: 10px; }
+        .mini-card {
+            display: flex; align-items: center; gap: 10px; padding: 8px;
+            background: var(--panel); border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+            transition: 0.2s;
+        }
+        .mini-card:hover { border-color: var(--cyan); background: #1a1a20; }
+        .mini-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+        .mini-title { font-size: 0.8rem; line-height: 1.2; overflow: hidden; }
+
+        .gv-stage { width: 100%; min-height: 80vh; }
+        .game-frame-wrapper {
+            position: relative; width: 100%; padding-top: 56.25%; 
+            background: black; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.1);
+        }
+        .game-frame-wrapper iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+        }
+        .game-meta { margin-top: 15px; background: var(--panel); padding: 15px; border-radius: 10px; }
+        .fs-btn {
+            position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7);
+            color: white; border: 1px solid #444; padding: 8px; border-radius: 6px; cursor: pointer;
+            z-index: 10;
+        }
+
+        @media (max-width: 1024px) {
+            .gv-layout { display: flex; flex-direction: column; max-width: 100%; padding: 0 10px; }
+            .gv-sidebar { display: none; } 
+            .gv-mobile-grid { 
+                display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+                gap: 10px; margin-top: 20px; width: 100%;
+            }
+            .hero h1 { font-size: 1.8rem; }
+        }
+        @media (min-width: 1025px) { .gv-mobile-grid { display: none; } }
+
+        /* --- MODALS --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+            z-index: 6000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+        }
+        .modal-box { 
+            background: #111; padding: 30px; border-radius: 15px; border: 1px solid #333; 
+            width: 90%; max-width: 350px; text-align: center; position: relative;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal.active .modal-box { transform: scale(1); }
+        .close-modal { position: absolute; top: 10px; right: 15px; color: #666; cursor: pointer; font-size: 1.5rem; }
+        
+        /* New Animated Profile Styles */
+        .profile-header { text-align: center; margin-bottom: 20px; position: relative; }
+        .profile-img-wrap { width: 90px; height: 90px; margin: 0 auto; position: relative; }
+        .profile-img { 
+            width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--cyan); 
+            object-fit: cover; box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+        .online-dot {
+            position: absolute; bottom: 5px; right: 5px; width: 15px; height: 15px;
+            background: #0f0; border-radius: 50%; border: 2px solid #111;
+        }
+        
+        .profile-stat {
+            background: #1a1a20; padding: 12px; border-radius: 8px; margin-top: 10px;
+            display: flex; justify-content: space-between; font-size: 0.9rem; align-items: center;
+            border-left: 3px solid transparent; transition: 0.3s;
+        }
+        .profile-stat:hover { border-left-color: var(--cyan); background: #222; }
+
+        .modal-input {
+            width: 100%; padding: 12px; background: #000; border: 1px solid #333; 
+            color: white; border-radius: 6px; margin-bottom: 10px; font-size: 1rem;
+        }
+        .action-btn {
+            background: var(--cyan); color: black; border: none; padding: 12px; 
+            width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .action-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+        
+        .edit-name-btn {
+            background: none; border: none; color: var(--cyan); cursor: pointer; font-size: 0.9rem; margin-left: 10px;
+        }
+
+        /* --- FRIEND ID SECTION --- */
+        .commander-id-box {
+            background: rgba(0, 242, 255, 0.05); border: 1px dashed var(--cyan);
+            padding: 8px; margin: 10px 0; border-radius: 6px; font-family: monospace;
+            color: var(--cyan); letter-spacing: 1px; cursor: pointer; font-size: 0.9rem;
+            display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.2s;
+        }
+        .commander-id-box:hover { background: rgba(0, 242, 255, 0.15); }
+        .commander-id-box i { font-size: 0.8rem; opacity: 0.7; }
+
+        /* --- SOCIAL HUB (Friends List) --- */
+        #social-fab {
+            position: fixed; bottom: 20px; right: 20px;
+            width: 60px; height: 60px; background: var(--panel); border: 2px solid var(--cyan);
+            border-radius: 50%; display: none; align-items: center; justify-content: center;
+            color: var(--cyan); font-size: 1.5rem; cursor: pointer; z-index: 4000;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2); transition: 0.3s;
+        }
+        .fab-badge {
+            position: absolute; top: -5px; right: -5px; background: #ff4444; color: white;
+            width: 20px; height: 20px; border-radius: 50%; font-size: 0.7rem; display: flex;
+            align-items: center; justify-content: center; font-weight: bold; display: none;
+        }
+
+        #social-panel {
+            position: fixed; bottom: 90px; right: 20px; width: 320px; height: 450px;
+            background: var(--glass); backdrop-filter: blur(15px); border: 1px solid rgba(0, 242, 255, 0.3);
+            border-radius: 15px; z-index: 3999; transform: translateX(130%); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: -5px 5px 20px rgba(0,0,0,0.5);
+        }
+        #social-panel.active { transform: translateX(0); }
+        
+        .social-tabs { display: flex; background: rgba(0,0,0,0.5); }
+        .tab-btn { flex: 1; padding: 12px; background: none; border: none; color: #888; cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; }
+        .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+        .social-body { flex: 1; padding: 10px; overflow-y: auto; position: relative; }
+        .social-view { display: none; }
+        .social-view.active { display: block; }
+
+        .friend-item, .req-item {
+            display: flex; align-items: center; gap: 10px; padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; cursor: pointer;
+        }
+        .friend-item:hover, .req-item:hover { background: rgba(255,255,255,0.05); }
+        .f-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #444; }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-dot.online { background: #0f0; box-shadow: 0 0 5px #0f0; }
+        .status-dot.offline { background: #555; }
+
+        /* --- CHAT INTERFACE --- */
+        #chat-interface {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--dark); z-index: 50; display: flex; flex-direction: column;
+            transform: translateX(100%); transition: 0.3s ease;
+        }
+        #chat-interface.open { transform: translateX(0); }
+        
+        .chat-header {
+            padding: 10px; background: var(--panel); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px; font-weight: bold; color: var(--cyan);
+        }
+        .chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        
+        .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word; }
+        .msg.mine { align-self: flex-end; background: var(--cyan); color: black; border-bottom-right-radius: 2px; }
+        .msg.theirs { align-self: flex-start; background: #222; color: white; border-bottom-left-radius: 2px; }
+
+        .chat-input-area { padding: 10px; background: var(--panel); display: flex; gap: 10px; }
+        .chat-input { flex: 1; background: #000; border: 1px solid #333; color: white; padding: 8px; border-radius: 20px; }
+
+    </style>
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<nav>
+    <div class="logo" onclick="goHome()">
+        <i class="fas fa-atom"></i> <span style="margin-left:8px;">SCIENTIFIC NEXUS</span>
+    </div>
+    <div class="user-nav" id="auth-container">
+        <span style="font-size:0.8rem; color:#666;">Initializing...</span>
+    </div>
+</nav>
+
+<div id="app-content">
+    <div class="hero reveal-on-scroll">
+        <h1>RESEARCH TERMINAL</h1>
+        <p style="color:#888; font-size:0.95rem;">Advanced physics simulations & tactical modules.</p>
+    </div>
+
+    <div class="controls reveal-on-scroll">
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Search modules..." onkeyup="filterGames()">
+        </div>
+        <div class="categories">
+            <button class="cat-btn active" onclick="filterCat('All')">All</button>
+            <button class="cat-btn" onclick="filterCat('Arcade')">Arcade</button>
+            <button class="cat-btn" onclick="filterCat('Puzzle')">Puzzle</button>
+            <button class="cat-btn" onclick="filterCat('Physics')">Physics</button>
+        </div>
+    </div>
+
+    <div class="grid" id="game-grid"></div>
+</div>
+
+<div id="game-viewer">
+    <div class="gv-nav">
+        <button class="back-btn" onclick="closeGame()">
+            <i class="fas fa-arrow-left"></i> <span style="font-weight:bold; font-size:0.9rem;">EXIT SIMULATION</span>
+        </button>
+    </div>
+    <div class="gv-layout">
+        <div class="gv-sidebar" id="sidebar-left"></div>
+        <div class="gv-stage">
+            <div class="game-frame-wrapper" id="gf-wrapper">
+                <iframe id="game-frame" allowfullscreen></iframe>
+                <button class="fs-btn" onclick="toggleFull()"><i class="fas fa-expand"></i></button>
+            </div>
+            <div class="game-meta">
+                <h2 id="gv-title" style="margin:0; color:white;">Game Title</h2>
+                <div style="display:flex; justify-content:space-between; margin-top:10px; color:#888; font-size:0.9rem;">
+                    <span id="gv-cat">Category</span>
+                    <span><i class="fas fa-thumbs-up" style="color:var(--cyan)"></i> 98% Rating</span>
+                </div>
+            </div>
+            <div class="gv-mobile-grid" id="mobile-rec"></div>
+        </div>
+        <div class="gv-sidebar" id="sidebar-right"></div>
+    </div>
+</div>
+
+<div id="social-fab" onclick="toggleSocialPanel()">
+    <i class="fas fa-user-friends"></i>
+    <div class="fab-badge" id="req-badge">0</div>
+</div>
+
+<div id="social-panel">
+    <div id="chat-interface">
+        <div class="chat-header">
+            <button onclick="closeChat()" style="background:none; border:none; color:white; cursor:pointer;"><i class="fas fa-arrow-left"></i></button>
+            <span id="chat-friend-name">Friend</span>
+        </div>
+        <div class="chat-messages" id="chat-msgs"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Message..." onkeypress="handleChatKey(event)">
+            <button onclick="sendMessage()" style="background:var(--cyan); border:none; width:35px; height:35px; border-radius:50%; cursor:pointer;"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <div class="social-tabs">
+        <button class="tab-btn active" onclick="switchTab('friends')">ALLIES</button>
+        <button class="tab-btn" onclick="switchTab('requests')">REQUESTS</button>
+    </div>
+
+    <div class="social-body">
+        <div id="view-friends" class="social-view active">
+            <div id="friends-list" style="text-align:center; color:#666; margin-top:20px;">Scanning...</div>
+        </div>
+
+        <div id="view-requests" class="social-view">
+            <div style="padding:10px; border-bottom:1px solid var(--border);">
+                <input type="text" id="invite-input-tab" class="modal-input" placeholder="Enter 16-digit ID" maxlength="16" style="margin:0; text-align:center;">
+                <button onclick="sendInvite()" class="action-btn" style="margin-top:5px; font-size:0.8rem;">SEND INVITATION</button>
+                <p id="invite-msg-tab" style="font-size:0.8rem; margin-top:5px; text-align:center;"></p>
+            </div>
+            <div id="requests-list" style="text-align:center; color:#666; padding-top:20px;">No pending requests.</div>
+        </div>
+    </div>
+</div>
+
+<div id="login-modal" class="modal">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeModal('login-modal')">&times;</span>
+        <h2 style="color:white; margin-top:0;">Identity Verify</h2>
+        <p style="color:#888; font-size:0.9rem; margin-bottom:20px;">Access cloud saves and history.</p>
+        <button onclick="loginGoogle()" style="background:white; color:black; border:none; padding:12px; width:100%; border-radius:8px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;">
+            <i class="fab fa-google"></i> Sign in with Google
+        </button>
+    </div>
+</div>
+
+<div id="username-modal" class="modal" style="z-index: 6001;">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeUsernameModal()">&times;</span>
+        <h2 style="color:var(--cyan); margin-top:0;">Establish Alias</h2>
+        <p id="name-rules" style="color:#888; font-size:0.85rem; margin-bottom:15px;">
+            Create your unique ID.<br>
+            <span style="font-size:0.75rem; color:#555;">(3-10 chars. Max 2 uppercase letters)</span>
+        </p>
+        <input type="text" id="new-username" class="modal-input" placeholder="e.g. Neo" maxlength="10">
+        <p id="username-error" style="color: #ff4444; font-size: 0.8rem; display: none; margin: 5px 0;"></p>
+        <button id="submit-btn" onclick="submitUsername()" class="action-btn">CONFIRM IDENTITY</button>
+    </div>
+</div>
+
+<div id="profile-modal" class="modal">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeModal('profile-modal')">&times;</span>
+        <div id="profile-content"></div>
+        
+        <button onclick="logout()" style="margin-top:20px; background:#111; color:#ff4444; border:1px solid #333; padding:12px; width:100%; border-radius:6px; cursor:pointer; font-weight:bold; transition:0.3s;">
+            <i class="fas fa-power-off"></i> DISCONNECT
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, collection, addDoc, onSnapshot, query, where, deleteDoc, orderBy, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCrgwoD_IVwlyvUQwDDQj6T772obSOL8So",
+        authDomain: "scientificnexus-65c48.firebaseapp.com",
+        projectId: "scientificnexus-65c48",
+        storageBucket: "scientificnexus-65c48.firebasestorage.app",
+        messagingSenderId: "125907587809",
+        appId: "1:125907587809:web:d8068604db659fa357dda0",
+        measurementId: "G-787GN5V4WT"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    let currentUser = null;
+    let userData = null;
+    let activeChatId = null;
+    let unsubscribeChat = null;
+    let heartbeatInterval = null;
+
+    // --- GAMES DATA ---
+    const games = [
+        { name: "Fluid Sim", cat: "Physics", url: "https://paveldogreat.github.io/WebGL-Fluid-Simulation/", img: "https://placehold.co/600x400/000/00f2ff?text=FLUID+SIM&font=roboto" },
+        { name: "Hextris", cat: "Puzzle", url: "https://hextris.io/", img: "https://placehold.co/600x400/222/bc13fe?text=HEXTRIS&font=roboto" },
+        { name: "Pacman", cat: "Arcade", url: "https://freepacman.org/", img: "https://placehold.co/600x400/000/ffff00?text=PACMAN&font=roboto" },
+        { name: "Dino Run", cat: "Arcade", url: "https://chromedino.com/", img: "https://placehold.co/600x400/222/999?text=DINO+RUN&font=roboto" },
+        { name: "Solitaire", cat: "Puzzle", url: "https://www.google.com/logos/fnbx/solitaire/standalone.html", img: "https://placehold.co/600x400/004400/fff?text=SOLITAIRE&font=roboto" }
+    ];
+
+    const grid = document.getElementById('game-grid');
+
+    function render(filter = 'All') {
+        grid.innerHTML = '';
+        games.forEach((g, idx) => {
+            if (filter === 'All' || g.cat === filter) {
+                const card = document.createElement('div');
+                card.className = "card reveal-on-scroll"; 
+                card.innerHTML = `
+                    <img src="${g.img}" class="thumb" loading="lazy">
+                    <div class="card-body">
+                        <h3 class="card-title">${g.name}</h3>
+                        <span class="card-cat">${g.cat}</span>
+                    </div>
+                `;
+                card.onclick = () => openGame(idx);
+                grid.appendChild(card);
+            }
+        });
+        observeElements();
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) entry.target.classList.add('reveal');
+            else entry.target.classList.remove('reveal');
+        });
+    }, { threshold: 0.1 });
+
+    function observeElements() {
+        document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+    }
+
+    window.filterCat = (cat) => {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        render(cat);
+    };
+
+    window.filterGames = () => {
+        const query = document.getElementById('search-input').value.toLowerCase();
+        document.querySelectorAll('.card').forEach(c => {
+            const title = c.querySelector('.card-title').innerText.toLowerCase();
+            c.style.display = title.includes(query) ? 'block' : 'none';
+        });
+    };
+
+    window.openGame = (idx) => {
+        const g = games[idx];
+        const viewer = document.getElementById('game-viewer');
+        
+        document.getElementById('game-frame').src = g.url;
+        document.getElementById('gv-title').innerText = g.name;
+        document.getElementById('gv-cat').innerText = g.cat;
+
+        const recs = [...games].sort(() => 0.5 - Math.random()).slice(0, 4);
+        
+        const recHTML = (limit) => recs.slice(0,limit).map((gx, i) => `
+            <div class="mini-card" onclick="openGame(${games.indexOf(gx)})">
+                <img src="${gx.img}" class="mini-thumb">
+                <div class="mini-title">${gx.name}</div>
+            </div>
+        `).join('');
+
+        const mobileHTML = recs.map(gx => `
+            <div class="card" onclick="openGame(${games.indexOf(gx)})" style="height:auto; transform:none; opacity:1;">
+                <img src="${gx.img}" class="thumb" style="height:80px;">
+                <div style="padding:5px; font-size:0.7rem;">${gx.name}</div>
+            </div>
+        `).join('');
+
+        document.getElementById('sidebar-left').innerHTML = recHTML(4);
+        document.getElementById('sidebar-right').innerHTML = recHTML(4);
+        document.getElementById('mobile-rec').innerHTML = mobileHTML;
+
+        viewer.style.display = 'block';
+        requestAnimationFrame(() => viewer.classList.add('active'));
+        document.body.style.overflow = 'hidden'; 
+        history.pushState({gameOpen: true}, "Game", "#game");
+    };
+
+    window.closeGame = () => {
+        const viewer = document.getElementById('game-viewer');
+        const frame = document.getElementById('game-frame');
+        
+        frame.src = 'about:blank';
+        viewer.classList.remove('active');
+        setTimeout(() => {
+            viewer.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }, 300);
+
+        if (location.hash === "#game") history.back();
+    };
+
+    window.onpopstate = () => {
+        if (document.getElementById('game-viewer').style.display === 'block') window.closeGame();
+    };
+
+    window.toggleFull = () => {
+        const el = document.getElementById('gf-wrapper');
+        if (!document.fullscreenElement) el.requestFullscreen().catch(e => console.log(e));
+        else document.exitFullscreen();
+    };
+
+    window.goHome = () => {
+        window.closeGame();
+        window.scrollTo(0,0);
+    };
+
+    window.openLogin = () => {
+        const m = document.getElementById('login-modal');
+        m.style.display = 'flex';
+        setTimeout(() => m.classList.add('active'), 10);
+    };
+
+    // --- HEARTBEAT SYSTEM (ONLINE STATUS) ---
+    function startHeartbeat() {
+        const beat = async () => {
+            if(!currentUser) return;
+            await updateDoc(doc(db, "users", currentUser.uid), { lastSeen: Date.now() });
+        };
+        beat();
+        heartbeatInterval = setInterval(beat, 120000); // 2 mins
+    }
+    
+    // --- SOCIAL & PROFILE FEATURES ---
+    
+    // Helper: Generate 16 digit ID
+    function generateCommanderId() {
+        const part1 = Math.floor(10000000 + Math.random() * 90000000);
+        const part2 = Math.floor(10000000 + Math.random() * 90000000);
+        return `${part1}${part2}`;
+    }
+
+    window.copyCommanderId = () => {
+        if(userData && userData.commanderId) {
+            navigator.clipboard.writeText(userData.commanderId);
+            const box = document.getElementById('cid-display');
+            const original = box.innerHTML;
+            box.innerHTML = '<i class="fas fa-check"></i> COPIED!';
+            setTimeout(() => box.innerHTML = original, 2000);
+        }
+    };
+
+    window.openProfile = () => {
+        if(currentUser && userData) {
+            const joinDate = userData.joined ? new Date(userData.joined.seconds * 1000).toLocaleDateString() : 'Today';
+            
+            // If user doesn't have an ID (legacy users), create one visually (saved later)
+            const displayId = userData.commanderId || "Generating...";
+            
+            document.getElementById('profile-content').innerHTML = `
+                <div class="profile-header">
+                    <div class="profile-img-wrap">
+                        <img src="${currentUser.photoURL}" class="profile-img">
+                        <div class="online-dot"></div>
+                    </div>
+                    <h2 style="margin:15px 0 5px 0; color:white; letter-spacing:1px;">
+                        ${userData.username || "Unknown"}
+                        <button class="edit-name-btn" onclick="openChangeName()"><i class="fas fa-edit"></i></button>
+                    </h2>
+                    
+                    <div class="commander-id-box" id="cid-display" onclick="copyCommanderId()" title="Click to Copy">
+                        <span>ID: ${displayId}</span>
+                        <i class="far fa-copy"></i>
+                    </div>
+                </div>
+                
+                <div class="profile-stat">
+                    <span><i class="fas fa-shield-alt" style="color:var(--cyan); margin-right:8px;"></i> Clearance</span> 
+                    <span style="color:white; font-weight:bold;">Researcher</span>
+                </div>
+                <div class="profile-stat">
+                    <span><i class="fas fa-calendar-alt" style="color:var(--purple); margin-right:8px;"></i> Active Since</span> 
+                    <span style="color:#888;">${joinDate}</span>
+                </div>
+            `;
+            
+            const m = document.getElementById('profile-modal');
+            m.style.display = 'flex';
+            setTimeout(() => m.classList.add('active'), 10);
+            
+            // Ensure ID exists in DB
+            if(!userData.commanderId) ensureCommanderId();
+        }
+    };
+
+    // Ensure user has a 16-digit ID
+    async function ensureCommanderId() {
+        if(!userData.commanderId) {
+            const newId = generateCommanderId();
+            
+            // Save to Public Lookup
+            await setDoc(doc(db, "friend_codes", newId), {
+                uid: currentUser.uid,
+                username: userData.username
+            });
+
+            // Save to Private Profile
+            await updateDoc(doc(db, "users", currentUser.uid), {
+                commanderId: newId
+            });
+
+            userData.commanderId = newId;
+            // Update UI if open
+            const display = document.getElementById('cid-display');
+            if(display) display.innerHTML = `<span>ID: ${newId}</span><i class="far fa-copy"></i>`;
+        }
+    }
+
+    // --- FRIEND REQUEST SYSTEM ---
+    window.sendInvite = async () => {
+        const code = document.getElementById('invite-input-tab').value.trim();
+        const msg = document.getElementById('invite-msg-tab');
+        
+        if(code.length !== 16) { msg.innerText = "Invalid ID."; return; }
+        if(code === userData.commanderId) { msg.innerText = "Cannot invite self."; return; }
+
+        try {
+            msg.innerText = "Scanning...";
+            const snap = await getDoc(doc(db, "friend_codes", code));
+            
+            if(!snap.exists()) { msg.innerText = "ID not found."; return; }
+            const targetUid = snap.data().uid;
+
+            if(userData.friends && userData.friends.some(f => f.uid === targetUid)) {
+                msg.innerText = "Already allies."; return;
+            }
+
+            await addDoc(collection(db, "friend_requests"), {
+                fromUid: currentUser.uid, fromName: userData.username,
+                toUid: targetUid, timestamp: serverTimestamp()
+            });
+
+            msg.innerText = "Request Sent!"; msg.style.color = "#0f0";
+            document.getElementById('invite-input-tab').value = "";
+        } catch(e) { msg.innerText = "Failed."; }
+    };
+
+    function listenForRequests() {
+        const q = query(collection(db, "friend_requests"), where("toUid", "==", currentUser.uid));
+        
+        onSnapshot(q, (snapshot) => {
+            const list = document.getElementById('requests-list');
+            const badge = document.getElementById('req-badge');
+            let count = 0;
+            let html = '';
+
+            snapshot.docs.forEach(d => {
+                const req = d.data();
+                if(req.type === 'ACK_ACCEPT') {
+                    // Auto-accept handshake
+                    updateDoc(doc(db, "users", currentUser.uid), { friends: arrayUnion({ uid: req.fromUid, username: req.fromName }) });
+                    deleteDoc(doc(db, "friend_requests", d.id));
+                } else {
+                    count++;
+                    html += `
+                    <div class="req-item">
+                        <div style="flex:1">
+                            <span style="color:white; font-weight:bold">${req.fromName}</span>
+                            <div style="font-size:0.75rem; color:#666">Incoming Alliance</div>
+                        </div>
+                        <button onclick="acceptRequest('${d.id}', '${req.fromUid}', '${req.fromName}')" style="background:#0f0; border:none; border-radius:4px; padding:5px 8px; margin-right:5px;"><i class="fas fa-check"></i></button>
+                        <button onclick="rejectRequest('${d.id}')" style="background:#f00; border:none; border-radius:4px; padding:5px 8px; color:white;"><i class="fas fa-times"></i></button>
+                    </div>`;
+                }
+            });
+
+            if(count > 0) {
+                badge.style.display = 'flex'; badge.innerText = count; list.innerHTML = html;
+            } else {
+                badge.style.display = 'none'; list.innerHTML = "No pending requests.";
+            }
+        });
+    }
+
+    window.acceptRequest = async (reqId, fromUid, fromName) => {
+        await updateDoc(doc(db, "users", currentUser.uid), { friends: arrayUnion({ uid: fromUid, username: fromName }) });
+        await deleteDoc(doc(db, "friend_requests", reqId));
+        await addDoc(collection(db, "friend_requests"), {
+            fromUid: currentUser.uid, fromName: userData.username,
+            toUid: fromUid, type: 'ACK_ACCEPT', timestamp: serverTimestamp()
+        });
+        listenToFriends();
+    };
+
+    window.rejectRequest = async (id) => deleteDoc(doc(db, "friend_requests", id));
+
+    // --- FRIENDS & CHAT ---
+    function listenToFriends() {
+        if(!userData.friends) { document.getElementById('friends-list').innerHTML = "No allies."; return; }
+        
+        const renderList = () => {
+             const list = document.getElementById('friends-list');
+             if(userData.friends.length === 0) { list.innerHTML = "No allies."; return; }
+             list.innerHTML = userData.friends.map(f => `
+                <div class="friend-item" onclick="openChat('${f.uid}', '${f.username}')">
+                    <img src="https://ui-avatars.com/api/?name=${f.username}&background=random" class="f-avatar">
+                    <div style="flex:1; text-align:left;">
+                        <span style="font-weight:bold; display:block;">${f.username}</span>
+                        <span style="font-size:0.75rem; color:#666;" id="status-${f.uid}">
+                            <div class="status-dot"></div> Offline
+                        </span>
+                    </div>
+                    <i class="far fa-comment-alt" style="color:#666"></i>
+                </div>
+            `).join('');
+        };
+        renderList();
+
+        // Check Online Status loop
+        setInterval(async () => {
+            userData.friends.forEach(async f => {
+                const s = await getDoc(doc(db, "users", f.uid));
+                if(s.exists()) {
+                    const isOnline = (Date.now() - (s.data().lastSeen || 0)) < 300000;
+                    const el = document.getElementById(`status-${f.uid}`);
+                    if(el) el.innerHTML = isOnline ? `<div class="status-dot online"></div> Online` : `<div class="status-dot"></div> Offline`;
+                }
+            });
+        }, 15000);
+    }
+
+    window.openChat = (uid, name) => {
+        document.getElementById('chat-interface').classList.add('open');
+        document.getElementById('chat-friend-name').innerText = name;
+        
+        const chatID = [currentUser.uid, uid].sort().join('_');
+        activeChatId = chatID;
+        setDoc(doc(db, "chats", chatID), { participants: [currentUser.uid, uid] }, { merge: true });
+
+        const q = query(collection(db, "chats", chatID, "messages"), orderBy("timestamp", "asc"));
+        if(unsubscribeChat) unsubscribeChat();
+        
+        unsubscribeChat = onSnapshot(q, (snap) => {
+            const div = document.getElementById('chat-msgs');
+            div.innerHTML = snap.docs.map(d => {
+                const m = d.data();
+                return `<div class="msg ${m.sender === currentUser.uid ? 'mine' : 'theirs'}">${m.text}</div>`;
+            }).join('');
+            div.scrollTop = div.scrollHeight;
+        });
+    };
+
+    window.closeChat = () => {
+        document.getElementById('chat-interface').classList.remove('open');
+        if(unsubscribeChat) unsubscribeChat();
+    };
+
+    window.sendMessage = async () => {
+        const inp = document.getElementById('chat-input');
+        if(!inp.value.trim()) return;
+        await addDoc(collection(db, "chats", activeChatId, "messages"), {
+            text: inp.value.trim(), sender: currentUser.uid, timestamp: serverTimestamp()
+        });
+        inp.value = '';
+    };
+
+    window.handleChatKey = (e) => { if(e.key === 'Enter') window.sendMessage(); };
+
+    // --- USERNAME LOGIC (7 DAY LIMIT) ---
+    window.openChangeName = () => {
+        window.closeModal('profile-modal');
+        const m = document.getElementById('username-modal');
+        m.style.display = 'flex'; setTimeout(() => m.classList.add('active'), 10);
+        
+        const now = Date.now();
+        const lastChanged = userData.usernameLastChanged || 0;
+        const diff = now - lastChanged;
+        const daysLeft = 7 - (diff / (1000 * 60 * 60 * 24));
+        const btn = document.getElementById('submit-btn');
+        const rules = document.getElementById('name-rules');
+
+        if (diff < 604800000 && lastChanged !== 0) { // 7 days in ms
+            btn.disabled = true;
+            btn.style.background = '#333';
+            btn.innerText = `LOCKED (${Math.ceil(daysLeft)} DAYS)`;
+            rules.innerText = "Security protocol locks identity for 7 days.";
+            rules.style.color = "#ff4444";
+        } else {
+            btn.disabled = false;
+            btn.style.background = 'var(--cyan)';
+            btn.innerText = "CONFIRM NEW IDENTITY";
+            rules.innerText = "Warning: This will change your public alias.";
+            rules.style.color = "#888";
+        }
+    };
+
+    window.submitUsername = async () => {
+        const input = document.getElementById('new-username');
+        const errorMsg = document.getElementById('username-error');
+        const btn = document.getElementById('submit-btn');
+        const newName = input.value.trim();
+        const now = Date.now();
+
+        if(newName.length < 3 || newName.length > 10) {
+            errorMsg.innerText = "Must be between 3 and 10 characters.";
+            errorMsg.style.display = 'block'; return;
+        }
+
+        const capsCount = (newName.match(/[A-Z]/g) || []).length;
+        if(capsCount > 2) {
+            errorMsg.innerText = "Maximum 2 uppercase letters allowed.";
+            errorMsg.style.display = 'block'; return;
+        }
+
+        btn.innerText = "SECURING ALIAS...";
+        btn.disabled = true;
+        errorMsg.style.display = 'none';
+
+        try {
+            const usernameRef = doc(db, "usernames", newName);
+            const nameCheck = await getDoc(usernameRef);
+            if (nameCheck.exists() && nameCheck.data().uid !== currentUser.uid) {
+                throw { code: 'permission-denied' };
+            }
+
+            const oldName = userData?.username;
+
+            await runTransaction(db, async (transaction) => {
+                if(oldName) transaction.delete(doc(db, "usernames", oldName));
+                transaction.set(doc(db, "usernames", newName), { uid: currentUser.uid });
+
+                let cId = userData?.commanderId;
+                if(!cId) {
+                    cId = generateCommanderId();
+                    transaction.set(doc(db, "friend_codes", cId), { uid: currentUser.uid, username: newName });
+                } else {
+                    transaction.update(doc(db, "friend_codes", cId), { username: newName });
+                }
+
+                transaction.set(doc(db, "users", currentUser.uid), {
+                    username: newName,
+                    usernameLastChanged: now,
+                    email: currentUser.email,
+                    joined: userData?.joined || now,
+                    commanderId: cId,
+                    lastSeen: now,
+                    friends: userData?.friends || []
+                }, { merge: true });
+            });
+            
+            location.reload();
+            
+        } catch (e) {
+            console.error(e);
+            btn.innerText = "CONFIRM IDENTITY";
+            btn.disabled = false;
+            if (e.code === 'permission-denied') errorMsg.innerText = "Username taken. Try another.";
+            else errorMsg.innerText = "Connection failed. Please retry.";
+            errorMsg.style.display = 'block';
+        }
+    };
+
+    // --- UI HELPERS ---
+    window.toggleSocialPanel = () => document.getElementById('social-panel').classList.toggle('active');
+    
+    window.switchTab = (t) => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.social-view').forEach(v => v.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(`view-${t}`).classList.add('active');
+    };
+
+    window.closeModal = (id) => {
+        const m = document.getElementById(id);
+        m.classList.remove('active');
+        setTimeout(() => m.style.display = 'none', 300);
+        if(id === 'username-modal') {
+             document.getElementById('username-error').style.display = 'none';
+             document.getElementById('submit-btn').innerText = "CONFIRM IDENTITY";
+             document.getElementById('submit-btn').disabled = false;
+        }
+    };
+    
+    window.closeUsernameModal = () => { if(userData?.username) window.closeModal('username-modal'); };
+
+    // --- AUTH LOGIC ---
+    window.loginGoogle = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Login Error:", error);
+            alert("Login Failed: " + error.message);
+        }
+    };
+
+    window.logout = () => {
+        signOut(auth).then(() => {
+            window.closeModal('profile-modal');
+            document.getElementById('auth-container').innerHTML = `<button class="auth-btn" onclick="openLogin()"><i class="fas fa-user"></i> LOGIN</button>`;
+            document.getElementById('social-fab').style.display = 'none';
+            document.getElementById('social-panel').classList.remove('active');
+            if(heartbeatInterval) clearInterval(heartbeatInterval);
+            userData = null;
+        });
+    };
+
+    function updateUI(user) {
+        const container = document.getElementById('auth-container');
+        const displayName = userData?.username || user.displayName.split(' ')[0];
+        
+        container.innerHTML = `
+            <button class="auth-btn" onclick="openProfile()" style="border-color:var(--cyan);">
+                <img src="${user.photoURL}" class="user-avatar">
+                <span>${displayName}</span>
+            </button>
+        `;
+        document.getElementById('social-fab').style.display = 'flex';
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+        const container = document.getElementById('auth-container');
+        if (user) {
+            currentUser = user;
+            const ref = doc(db, "users", user.uid);
+            try {
+                const snap = await getDoc(ref);
+                if (snap.exists()) {
+                    userData = snap.data();
+                    if(!userData.username) {
+                        const m = document.getElementById('username-modal');
+                        m.style.display = 'flex'; setTimeout(() => m.classList.add('active'), 10);
+                    } else {
+                        if(!userData.commanderId) ensureCommanderId();
+                        // Init Features
+                        startHeartbeat();
+                        listenForRequests();
+                        listenToFriends();
+                    }
+                } else {
+                    userData = {}; 
+                    const m = document.getElementById('username-modal');
+                    m.style.display = 'flex'; setTimeout(() => m.classList.add('active'), 10);
+                }
+            } catch (e) { 
+                console.log("DB Error:", e);
+                userData = { username: user.displayName }; 
+            }
+            updateUI(user);
+            if(document.getElementById('login-modal').classList.contains('active')) {
+                window.closeModal('login-modal');
+            }
+        } else {
+            currentUser = null;
+            userData = null;
+            container.innerHTML = `<button class="auth-btn" onclick="openLogin()"><i class="fas fa-user"></i> LOGIN</button>`;
+            document.getElementById('social-fab').style.display = 'none';
+        }
+    });
+
+    window.onload = () => {
+        document.getElementById('loader').style.opacity = '0';
+        setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+        render();
+        observeElements();
+    };
+
+</script>
+</body>
+</html>
