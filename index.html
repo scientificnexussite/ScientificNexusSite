@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scientific Nexus | Research Terminal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { 
+            --cyan: #00f2ff; 
+            --purple: #bc13fe; 
+            --dark: #050507; 
+            --panel: #0f0f13;
+            --border: rgba(255,255,255,0.08);
+            --header-h: 70px;
+            --glass: rgba(15, 15, 19, 0.95);
+            --danger: #ff4444;
+            --success: #00ff88;
+        }
+        
+        * { 
+            box-sizing: border-box; outline: none; 
+            -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+        }
+        input, textarea { user-select: text !important; -webkit-user-select: text !important; }
+
+        body { 
+            background: var(--dark); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; overflow-x: hidden;
+        }
+
+        /* --- LOADER --- */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark);
+            z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease; pointer-events: all;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 3px solid rgba(0, 242, 255, 0.2); 
+            border-top: 3px solid var(--cyan); border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- HEADER --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 5%; background: rgba(5,5,7,0.95); backdrop-filter: blur(10px);
+            position: fixed; width: 100%; top: 0; z-index: 1000; border-bottom: 1px solid var(--border);
+            height: var(--header-h);
+        }
+        .logo { 
+            font-weight: 800; color: var(--cyan); letter-spacing: 1px; font-size: 1.1rem; 
+            text-transform: uppercase; display: flex; align-items: center; gap: 8px; cursor: pointer;
+        }
+        .user-nav { display: flex; align-items: center; gap: 15px; }
+        .auth-btn {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+        }
+        .auth-btn:hover { border-color: var(--cyan); background: rgba(0, 242, 255, 0.1); }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--cyan); object-fit: cover; }
+
+        /* --- MAIN LAYOUT --- */
+        #app-content { padding-top: var(--header-h); min-height: 100vh; transition: transform 0.3s ease; }
+        
+        /* Updated Animation Classes for Loop */
+        .reveal-on-scroll {
+            opacity: 0; 
+            transform: translateY(50px) scale(0.95);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .reveal-on-scroll.reveal { 
+            opacity: 1; 
+            transform: translateY(0) scale(1); 
+        }
+
+        .hero {
+            padding: 60px 20px 40px; text-align: center;
+            background: radial-gradient(circle at 50% 0%, #130821 0%, var(--dark) 80%);
+        }
+        .hero h1 {
+            font-size: 2.5rem; margin: 0;
+            background: linear-gradient(to right, #fff, var(--cyan)); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .controls { max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; }
+        
+        .search-bar {
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+            padding: 12px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .search-bar:focus-within {
+            transform: scale(1.02); border-color: var(--cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+        }
+        .search-bar i { color: #666; transition: all 0.4s; }
+        .search-bar:focus-within i { color: var(--cyan); transform: rotate(90deg) scale(1.2); }
+        .search-bar input { background: transparent; border: none; color: white; width: 100%; font-size: 1rem; }
+        
+        .categories { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .cat-btn {
+            background: #1a1a20; color: #888; border: 1px solid var(--border); padding: 8px 16px; 
+            border-radius: 20px; white-space: nowrap; cursor: pointer; font-size: 0.9rem; transition: 0.3s;
+        }
+        .cat-btn.active { background: var(--cyan); color: black; border-color: var(--cyan); font-weight: bold; }
+
+        .grid { 
+            display: grid; gap: 15px; padding: 0 20px 50px; max-width: 1200px; margin: 0 auto;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+        }
+        @media (max-width: 480px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 10px 50px; } }
+
+        .card { 
+            background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+            position: relative; cursor: pointer;
+        }
+        .card:hover { transform: translateY(-5px) !important; border-color: var(--cyan); }
+        .thumb { height: 120px; width: 100%; object-fit: cover; }
+        .card-body { padding: 10px; }
+        .card-title { margin: 0; font-size: 0.9rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-cat { color: #666; font-size: 0.75rem; margin-top: 4px; display: block;}
+
+        /* --- GAME PLAYER --- */
+        #game-viewer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--dark); z-index: 5000; overflow-y: auto;
+            display: none; opacity: 0; transition: opacity 0.3s ease;
+        }
+        #game-viewer.active { opacity: 1; }
+
+        .gv-nav {
+            height: 60px; display: flex; align-items: center; padding: 0 20px;
+            border-bottom: 1px solid var(--border); background: var(--panel);
+            position: sticky; top: 0; z-index: 5001;
+        }
+        .back-btn { 
+            background: transparent; border: none; color: white; font-size: 1.2rem; cursor: pointer; 
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .gv-layout {
+            display: grid; 
+            grid-template-columns: 180px minmax(300px, 1fr) 180px;
+            gap: 20px; max-width: 1600px; margin: 20px auto; padding: 0 20px;
+            align-items: start;
+        }
+
+        .gv-sidebar { display: flex; flex-direction: column; gap: 10px; }
+        .mini-card {
+            display: flex; align-items: center; gap: 10px; padding: 8px;
+            background: var(--panel); border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+            transition: 0.2s;
+        }
+        .mini-card:hover { border-color: var(--cyan); background: #1a1a20; }
+        .mini-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+        .mini-title { font-size: 0.8rem; line-height: 1.2; overflow: hidden; }
+
+        .gv-stage { width: 100%; min-height: 80vh; }
+        .game-frame-wrapper {
+            position: relative; width: 100%; padding-top: 56.25%; 
+            background: black; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.1);
+        }
+        .game-frame-wrapper iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+        }
+        .game-meta { margin-top: 15px; background: var(--panel); padding: 15px; border-radius: 10px; }
+        .fs-btn {
+            position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7);
+            color: white; border: 1px solid #444; padding: 8px; border-radius: 6px; cursor: pointer;
+            z-index: 10;
+        }
+
+        @media (max-width: 1024px) {
+            .gv-layout { display: flex; flex-direction: column; max-width: 100%; padding: 0 10px; }
+            .gv-sidebar { display: none; } 
+            .gv-mobile-grid { 
+                display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+                gap: 10px; margin-top: 20px; width: 100%;
+            }
+            .hero h1 { font-size: 1.8rem; }
+        }
+        @media (min-width: 1025px) { .gv-mobile-grid { display: none; } }
+
+        /* --- MODALS --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+            z-index: 6000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+        }
+        .modal-box { 
+            background: #111; padding: 30px; border-radius: 15px; border: 1px solid #333; 
+            width: 90%; max-width: 400px; text-align: center; position: relative;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal.active .modal-box { transform: scale(1); }
+        .close-modal { position: absolute; top: 10px; right: 15px; color: #666; cursor: pointer; font-size: 1.5rem; }
+        
+        /* --- HOLOGRAPHIC PROFILE --- */
+        .holo-card {
+            background: linear-gradient(135deg, rgba(10,10,15,0.95), rgba(5,5,8,0.98));
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            box-shadow: 0 0 25px rgba(0, 242, 255, 0.1), inset 0 0 20px rgba(0,0,0,0.8);
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            text-align: left;
+        }
+        .holo-card::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(to bottom, transparent, rgba(0, 242, 255, 0.05), transparent);
+            transform: rotate(45deg); animation: holoScan 4s infinite linear; pointer-events: none;
+        }
+        @keyframes holoScan { 0% { transform: translateY(-100%) rotate(45deg); } 100% { transform: translateY(100%) rotate(45deg); } }
+
+        .holo-header { display: flex; align-items: center; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 15px; }
+        .holo-img-container {
+            position: relative; width: 80px; height: 80px;
+            border: 2px solid var(--cyan); border-radius: 50%;
+            padding: 3px; box-shadow: 0 0 15px var(--cyan);
+        }
+        .holo-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; opacity: 0.9; }
+        .holo-info h2 { margin: 0; color: white; font-size: 1.4rem; letter-spacing: 1px; text-transform: uppercase; }
+        .holo-info span { color: var(--cyan); font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; }
+        .holo-body { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .holo-field {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05);
+            padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .holo-label { font-size: 0.7rem; color: #888; text-transform: uppercase; display: block; margin-bottom: 2px; }
+        .holo-value { color: white; font-family: monospace; font-size: 0.95rem; letter-spacing: 1px; }
+        
+        .id-badge {
+            background: rgba(0, 242, 255, 0.1); color: var(--cyan); border: 1px dashed var(--cyan);
+            padding: 8px; text-align: center; margin-top: 15px; font-family: monospace; font-size: 1.1rem;
+            cursor: pointer; transition: 0.3s; position: relative;
+        }
+        .id-badge:hover { background: rgba(0, 242, 255, 0.2); box-shadow: 0 0 10px rgba(0, 242, 255, 0.2); }
+        .security-stamp {
+            position: absolute; top: 10px; right: 10px;
+            border: 2px solid var(--success); color: var(--success);
+            padding: 2px 8px; font-size: 0.6rem; font-weight: bold; transform: rotate(-10deg);
+            opacity: 0.7; letter-spacing: 1px;
+        }
+
+        .modal-input {
+            width: 100%; padding: 12px; background: #000; border: 1px solid #333; 
+            color: white; border-radius: 6px; margin-bottom: 10px; font-size: 1rem;
+        }
+        .action-btn {
+            background: var(--cyan); color: black; border: none; padding: 12px; 
+            width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .action-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+        .edit-name-btn {
+            background: none; border: none; color: var(--cyan); cursor: pointer; font-size: 0.9rem; margin-left: 10px;
+        }
+
+        /* --- SOCIAL HUB --- */
+        #social-fab {
+            position: fixed; bottom: 20px; right: 20px;
+            width: 60px; height: 60px; background: var(--panel); border: 2px solid var(--cyan);
+            border-radius: 50%; display: none; align-items: center; justify-content: center;
+            color: var(--cyan); font-size: 1.5rem; cursor: pointer; z-index: 4000;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2); transition: 0.3s;
+        }
+        .fab-badge {
+            position: absolute; top: -5px; right: -5px; background: #ff4444; color: white;
+            width: 20px; height: 20px; border-radius: 50%; font-size: 0.7rem; display: flex;
+            align-items: center; justify-content: center; font-weight: bold; display: none;
+        }
+
+        #social-panel {
+            position: fixed; bottom: 90px; right: 20px; width: 320px; height: 450px;
+            background: var(--glass); backdrop-filter: blur(15px); border: 1px solid rgba(0, 242, 255, 0.3);
+            border-radius: 15px; z-index: 3999; transform: translateX(130%); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: -5px 5px 20px rgba(0,0,0,0.5);
+        }
+        #social-panel.active { transform: translateX(0); }
+        
+        .social-tabs { display: flex; background: rgba(0,0,0,0.5); }
+        .tab-btn { flex: 1; padding: 12px; background: none; border: none; color: #888; cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; font-size: 0.8rem; }
+        .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+        .social-body { flex: 1; padding: 10px; overflow-y: auto; position: relative; }
+        .social-view { display: none; }
+        .social-view.active { display: block; }
+
+        .friend-item, .req-item {
+            display: flex; align-items: center; gap: 10px; padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; position: relative;
+        }
+        .friend-item:hover, .req-item:hover { background: rgba(255,255,255,0.05); }
+        .f-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #444; }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-dot.online { background: #0f0; box-shadow: 0 0 5px #0f0; }
+        .status-dot.offline { background: #555; }
+
+        .friend-actions { display: flex; gap: 5px; opacity: 0.7; }
+        .friend-btn {
+            background: transparent; border: 1px solid #333; color: #888;
+            width: 28px; height: 28px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .friend-btn:hover { color: white; border-color: #666; }
+        .friend-btn.block:hover { color: var(--danger); border-color: var(--danger); }
+        .friend-btn.unblock { color: var(--cyan); border-color: var(--cyan); width: auto; padding: 0 10px; font-size: 0.8rem; }
+
+        /* --- CHAT INTERFACE --- */
+        #chat-interface {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--dark); z-index: 50; display: flex; flex-direction: column;
+            transform: translateX(100%); transition: 0.3s ease;
+        }
+        #chat-interface.open { transform: translateX(0); }
+        .chat-header {
+            padding: 10px; background: var(--panel); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px; font-weight: bold; color: var(--cyan);
+        }
+        .chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word; }
+        .msg.mine { align-self: flex-end; background: var(--cyan); color: black; border-bottom-right-radius: 2px; }
+        .msg.theirs { align-self: flex-start; background: #222; color: white; border-bottom-left-radius: 2px; }
+        .chat-input-area { padding: 10px; background: var(--panel); display: flex; gap: 10px; }
+        .chat-input { flex: 1; background: #000; border: 1px solid #333; color: white; padding: 8px; border-radius: 20px; }
+
+    </style>
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<nav>
+    <div class="logo" onclick="goHome()">
+        <i class="fas fa-atom"></i> <span style="margin-left:8px;">SCIENTIFIC NEXUS</span>
+    </div>
+    <div class="user-nav" id="auth-container">
+        <span style="font-size:0.8rem; color:#666;">Initializing...</span>
+    </div>
+</nav>
+
+<div id="app-content">
+    <div class="hero reveal-on-scroll">
+        <h1>RESEARCH TERMINAL</h1>
+        <p style="color:#888; font-size:0.95rem;">Advanced physics simulations & tactical modules.</p>
+    </div>
+
+    <div class="controls reveal-on-scroll">
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Search modules..." onkeyup="filterGames()">
+        </div>
+        <div class="categories">
+            <button class="cat-btn active" onclick="filterCat('All')">All</button>
+            <button class="cat-btn" onclick="filterCat('Arcade')">Arcade</button>
+            <button class="cat-btn" onclick="filterCat('Puzzle')">Puzzle</button>
+            <button class="cat-btn" onclick="filterCat('Physics')">Physics</button>
+        </div>
+    </div>
+
+    <div class="grid" id="game-grid"></div>
+</div>
+
+<div id="game-viewer">
+    <div class="gv-nav">
+        <button class="back-btn" onclick="closeGame()">
+            <i class="fas fa-arrow-left"></i> <span style="font-weight:bold; font-size:0.9rem;">EXIT SIMULATION</span>
+        </button>
+    </div>
+    <div class="gv-layout">
+        <div class="gv-sidebar" id="sidebar-left"></div>
+        <div class="gv-stage">
+            <div class="game-frame-wrapper" id="gf-wrapper">
+                <iframe id="game-frame" allowfullscreen></iframe>
+                <button class="fs-btn" onclick="toggleFull()"><i class="fas fa-expand"></i></button>
+            </div>
+            <div class="game-meta">
+                <h2 id="gv-title" style="margin:0; color:white;">Game Title</h2>
+                <div style="display:flex; justify-content:space-between; margin-top:10px; color:#888; font-size:0.9rem;">
+                    <span id="gv-cat">Category</span>
+                    <span><i class="fas fa-thumbs-up" style="color:var(--cyan)"></i> 98% Rating</span>
+                </div>
+            </div>
+            <div class="gv-mobile-grid" id="mobile-rec"></div>
+        </div>
+        <div class="gv-sidebar" id="sidebar-right"></div>
+    </div>
+</div>
+
+<div id="social-fab" onclick="toggleSocialPanel()">
+    <i class="fas fa-user-friends"></i>
+    <div class="fab-badge" id="req-badge">0</div>
+</div>
+
+<div id="social-panel">
+    <div id="chat-interface">
+        <div class="chat-header">
+            <button onclick="closeChat()" style="background:none; border:none; color:white; cursor:pointer;"><i class="fas fa-arrow-left"></i></button>
+            <span id="chat-friend-name">Friend</span>
+        </div>
+        <div class="chat-messages" id="chat-msgs"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Message..." onkeypress="handleChatKey(event)">
+            <button onclick="sendMessage()" style="background:var(--cyan); border:none; width:35px; height:35px; border-radius:50%; cursor:pointer;"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <div class="social-tabs">
+        <button class="tab-btn active" onclick="switchTab('friends')">ALLIES</button>
+        <button class="tab-btn" onclick="switchTab('requests')">REQUESTS</button>
+    </div>
+
+    <div class="social-body">
+        <div id="view-friends" class="social-view active">
+            <div id="friends-list" style="text-align:center; color:#666; margin-top:20px;">Scanning...</div>
+        </div>
+
+        <div id="view-requests" class="social-view">
+            <div style="padding:10px; border-bottom:1px solid var(--border);">
+                <input type="text" id="invite-input-tab" class="modal-input" placeholder="Enter 16-digit ID" maxlength="16" style="margin:0; text-align:center;">
+                <button onclick="sendInvite()" class="action-btn" style="margin-top:5px; font-size:0.8rem;">SEND INVITATION</button>
+                <p id="invite-msg-tab" style="font-size:0.8rem; margin-top:5px; text-align:center;"></p>
+            </div>
+            <div id="requests-list" style="text-align:center; color:#666; padding-top:20px;">No pending requests.</div>
+        </div>
+    </div>
+</div>
+
+<div id="login-modal" class="modal">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeModal('login-modal')">×</span>
+        <h2 style="color:white; margin-top:0;">Identity Verify</h2>
+        <p style="color:#888; font-size:0.9rem; margin-bottom:20px;">Access cloud saves and history.</p>
+        <button onclick="loginGoogle()" style="background:white; color:black; border:none; padding:12px; width:100%; border-radius:8px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;">
+            <i class="fab fa-google"></i> Sign in with Google
+        </button>
+    </div>
+</div>
+
+<div id="username-modal" class="modal" style="z-index: 6001;">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeUsernameModal()">×</span>
+        <h2 style="color:var(--cyan); margin-top:0; text-transform:uppercase; letter-spacing:1px;">Establish Alias</h2>
+        <div style="text-align:left; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:0.8rem; color:#888; margin-bottom:5px;">PROTOCOL REQUIREMENTS:</div>
+            <ul style="margin:0; padding-left:20px; color:#aaa; font-size:0.8rem;">
+                <li>Max 10 characters length.</li>
+                <li>Max 2 uppercase letters allowed.</li>
+                <li>Alphanumeric only.</li>
+            </ul>
+            <p id="time-lock-msg" style="color:#ff4444; font-size:0.8rem; margin-top:5px; display:none;"></p>
+        </div>
+        <input type="text" id="new-username" class="modal-input" placeholder="e.g. NeoOne" maxlength="10">
+        <p id="username-error" style="color: #ff4444; font-size: 0.8rem; display: none; margin: 5px 0;"></p>
+        <button id="submit-btn" onclick="submitUsername()" class="action-btn">CONFIRM IDENTITY</button>
+    </div>
+</div>
+
+<div id="profile-modal" class="modal">
+    <div class="modal-box" style="background:transparent; border:none; box-shadow:none;">
+        <span class="close-modal" onclick="closeModal('profile-modal')" style="right:0; top:-30px;">×</span>
+        <div id="profile-content"></div>
+        <button onclick="logout()" style="margin-top:20px; background:rgba(0,0,0,0.8); color:#ff4444; border:1px solid #333; padding:12px; width:100%; border-radius:6px; cursor:pointer; font-weight:bold; transition:0.3s; backdrop-filter:blur(5px);">
+            <i class="fas fa-power-off"></i> DISCONNECT
+        </button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+    // --- CONFIGURATION ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCrgwoD_IVwlyvUQwDDQj6T772obSOL8So",
+        authDomain: "scientificnexus-65c48.firebaseapp.com",
+        projectId: "scientificnexus-65c48",
+        storageBucket: "scientificnexus-65c48.firebasestorage.app",
+        messagingSenderId: "125907587809",
+        appId: "1:125907587809:web:d8068604db659fa357dda0",
+        measurementId: "G-787GN5V4WT"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    let currentUser = null;
+    let userData = null; 
+    let activeChatId = null;
+    let chatUnsub = null;
+    let friendStatusUnsubs = []; // Store unlisteners for online status
+
+    // --- GAME DATA ---
+    const gameData = [
+        { title: "Paper.io 2", cat: "Arcade", url: "https://paper-io.com/", thumb: "https://img.poki.com/cdn-cgi/image/quality=78,width=600,height=600,fit=cover,f=auto/d2708e8aa31df3fe7b211bca2347cb56.png" },
+        { title: "Fluid Sim", cat: "Physics", url: "https://paveldogreat.github.io/WebGL-Fluid-Simulation/", thumb: "https://store-images.s-microsoft.com/image/apps.4394.13510798887593933.91e84e56-11f8-4354-94b1-84196d421259.0d2a842f-871d-4876-b333-e9687e14f6b4?mode=scale&q=90&h=300&w=300" },
+        { title: "Hextris", cat: "Puzzle", url: "https://hextris.io/", thumb: "https://raw.githubusercontent.com/hextris/hextris/gh-pages/images/icons/apple-touch-icon-144x144.png" },
+        { title: "Pacman", cat: "Arcade", url: "https://freepacman.org/", thumb: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Pacman.svg/1200px-Pacman.svg.png" },
+        { title: "Dino Run", cat: "Arcade", url: "https://chromedino.com/", thumb: "https://img.poki.com/cdn-cgi/image/quality=78,width=600,height=600,fit=cover,f=auto/96b825227702f23246f6580556209428.png" },
+        { title: "Solitaire", cat: "Puzzle", url: "https://www.google.com/logos/fnbx/solitaire/standalone.html", thumb: "https://img.poki.com/cdn-cgi/image/quality=78,width=600,height=600,fit=cover,f=auto/8e448b11678d42d62734157e934a3788.png" }
+    ];
+
+    // --- RENDERING & ANIMATION LOGIC ---
+    function render() {
+        const grid = document.getElementById('game-grid');
+        const sidebarL = document.getElementById('sidebar-left');
+        const sidebarR = document.getElementById('sidebar-right');
+        const mobileRec = document.getElementById('mobile-rec');
+        
+        grid.innerHTML = '';
+        if(sidebarL) sidebarL.innerHTML = '<h3 style="color:var(--cyan); margin:0 0 10px;">Trending</h3>';
+        if(sidebarR) sidebarR.innerHTML = '<h3 style="color:var(--purple); margin:0 0 10px;">New</h3>';
+        if(mobileRec) mobileRec.innerHTML = '';
+
+        gameData.forEach((g, i) => {
+            grid.appendChild(createCard(g));
+            const mini = createMini(g);
+            if (i < 3 && sidebarL) sidebarL.appendChild(mini.cloneNode(true));
+            else if (i < 6 && sidebarR) sidebarR.appendChild(mini.cloneNode(true));
+            if(mobileRec) mobileRec.appendChild(mini.cloneNode(true));
+        });
+
+        observeElements();
+    }
+
+    function createCard(g) {
+        const div = document.createElement('div');
+        div.className = 'card reveal-on-scroll';
+        div.innerHTML = `
+            <img src="${g.thumb}" class="thumb" loading="lazy" onerror="this.src='https://via.placeholder.com/300x200?text=Error'">
+            <div class="card-body">
+                <h3 class="card-title">${g.title}</h3>
+                <span class="card-cat">${g.cat}</span>
+            </div>
+        `;
+        div.onclick = () => openGame(g.url, g.title, g.cat);
+        return div;
+    }
+
+    function createMini(g) {
+        const div = document.createElement('div');
+        div.className = 'mini-card';
+        div.innerHTML = `
+            <img src="${g.thumb}" class="mini-thumb">
+            <div class="mini-title">${g.title}</div>
+        `;
+        div.onclick = () => openGame(g.url, g.title, g.cat);
+        return div;
+    }
+
+    // --- FIXED LOOPING ANIMATION ---
+    function observeElements() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                // If it is on screen, show it.
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('reveal');
+                } else {
+                    // If it leaves screen, HIDE IT so it can pop up again later (Looping)
+                    entry.target.classList.remove('reveal');
+                }
+            });
+        }, { threshold: 0.05 }); // Lower threshold for better sensitivity
+        
+        document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+    }
+
+    // --- AUTH LOGIC ---
+    function loginGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider)
+            .then(() => closeModal('login-modal'))
+            .catch(err => alert("Login Error: " + err.message));
+    }
+
+    function logout() {
+        // Clear listeners to prevent memory leaks
+        friendStatusUnsubs.forEach(unsub => unsub());
+        friendStatusUnsubs = [];
+        auth.signOut().then(() => window.location.reload());
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+        currentUser = user;
+        const container = document.getElementById('auth-container');
+        
+        if (user) {
+            const docRef = db.collection('users').doc(user.uid);
+            docRef.onSnapshot(snapshot => {
+                if (snapshot.exists) {
+                    userData = snapshot.data();
+                    if (!userData.commanderId) ensureCommanderId();
+                    if (!userData.username) {
+                         document.getElementById('username-modal').classList.add('active');
+                    }
+                    updateUIWithProfile(); // Update UI whenever data changes
+                    startHeartbeat();
+                    loadSocialData();
+                } else {
+                    document.getElementById('username-modal').classList.add('active');
+                }
+            });
+        } else {
+            container.innerHTML = `
+                <button class="auth-btn" onclick="document.getElementById('login-modal').classList.add('active')">
+                    <i class="fas fa-sign-in-alt"></i> ACCESS TERMINAL
+                </button>
+            `;
+            document.getElementById('social-fab').style.display = 'none';
+        }
+    });
+
+    function updateUIWithProfile() {
+        if (!currentUser) return;
+        const container = document.getElementById('auth-container');
+        const displayName = (userData && userData.username) ? userData.username : "Recruit";
+        
+        // FIXED: Added onclick directly to HTML to prevent disconnects
+        container.innerHTML = `
+             <button class="auth-btn" id="profile-trigger-btn" style="border-color:var(--cyan);" onclick="openProfileModal()">
+                <img src="${currentUser.photoURL}" class="user-avatar">
+                <span>${displayName}</span>
+            </button>
+        `;
+        document.getElementById('social-fab').style.display = 'flex';
+    }
+
+    // --- FIXED PROFILE MODAL ---
+    function openProfileModal() {
+        if (!currentUser) return; // Safety check
+
+        // Safe check: If data isn't loaded yet, show placeholders instead of failing
+        const safeUsername = (userData && userData.username) ? userData.username : "Loading...";
+        const joinDate = (userData && userData.joined) ? new Date(userData.joined.seconds * 1000).toLocaleDateString() : 'Today';
+        const displayId = (userData && userData.commanderId) ? userData.commanderId : "Syncing...";
+        const maskedEmail = currentUser.email ? currentUser.email.replace(/(.{2})(.*)(@.*)/, "$1***REDACTED***$3") : "Hidden";
+        const photo = currentUser.photoURL || "https://via.placeholder.com/150";
+
+        const content = document.getElementById('profile-content');
+        
+        content.innerHTML = `
+            <div class="holo-card">
+                <div class="security-stamp">ENCRYPTED</div>
+                <div class="holo-header">
+                    <div class="holo-img-container">
+                        <img src="${photo}" class="holo-img">
+                    </div>
+                    <div class="holo-info">
+                        <h2>${safeUsername}</h2>
+                        <span>CLEARANCE LEVEL 1</span>
+                        <button class="edit-name-btn" onclick="openChangeName()"><i class="fas fa-pen"></i></button>
+                    </div>
+                </div>
+                <div class="holo-body">
+                    <div class="holo-field">
+                        <div>
+                            <span class="holo-label">Access Email</span>
+                            <span class="holo-value" style="font-size:0.8rem; opacity:0.7;">${maskedEmail}</span>
+                        </div>
+                        <i class="fas fa-lock" style="color:var(--success)"></i>
+                    </div>
+                    <div class="holo-field">
+                        <div>
+                            <span class="holo-label">Service Start</span>
+                            <span class="holo-value">${joinDate}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="id-badge" onclick="copyCode('${displayId}')">
+                    <span style="display:block; font-size:0.7rem; color:#888;">COMMANDER ID (TAP TO COPY)</span>
+                    ${displayId}
+                </div>
+            </div>
+        `;
+        document.getElementById('profile-modal').classList.add('active');
+    }
+
+    function generateCommanderId() {
+        const part1 = Math.floor(10000000 + Math.random() * 90000000);
+        const part2 = Math.floor(10000000 + Math.random() * 90000000);
+        return `${part1}${part2}`;
+    }
+
+    async function ensureCommanderId() {
+        if (!userData || userData.commanderId) return;
+        const newId = generateCommanderId();
+        const batch = db.batch();
+        batch.set(db.collection("friend_codes").doc(newId), { uid: currentUser.uid, username: userData.username || "Unknown" });
+        batch.update(db.collection("users").doc(currentUser.uid), { commanderId: newId });
+        await batch.commit();
+    }
+
+    function copyCode(code) {
+        if(code === "Syncing...") return;
+        navigator.clipboard.writeText(code);
+        const badge = document.querySelector('.id-badge');
+        const orig = badge.innerHTML;
+        badge.innerHTML = "ID COPIED TO CLIPBOARD";
+        badge.style.borderColor = "#00ff88";
+        badge.style.color = "#00ff88";
+        setTimeout(() => { badge.innerHTML = orig; badge.style.borderColor = ""; badge.style.color = ""; }, 2000);
+    }
+
+    // --- USERNAME ---
+    window.openChangeName = () => {
+        closeModal('profile-modal');
+        document.getElementById('username-modal').classList.add('active');
+    };
+
+    async function submitUsername() {
+        const input = document.getElementById('new-username');
+        const errorMsg = document.getElementById('username-error');
+        const btn = document.getElementById('submit-btn');
+        const username = input.value.trim();
+
+        if (username.length < 3 || username.length > 10) {
+            errorMsg.innerText = "Error: Must be 3-10 characters."; errorMsg.style.display = 'block'; return;
+        }
+        if ((username.match(/[A-Z]/g) || []).length > 2) {
+            errorMsg.innerText = `Error: Too many uppercase letters.`; errorMsg.style.display = 'block'; return;
+        }
+        if (!/^[a-zA-Z0-9]+$/.test(username)) {
+            errorMsg.innerText = "Error: Letters and numbers only."; errorMsg.style.display = 'block'; return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "PROCESSING...";
+
+        try {
+            const check = await db.collection('usernames').doc(username).get();
+            if (check.exists && check.data().uid !== currentUser.uid) {
+                errorMsg.innerText = "Username already taken."; errorMsg.style.display = 'block';
+                btn.disabled = false; btn.innerText = "CONFIRM IDENTITY";
+                return;
+            }
+
+            const batch = db.batch();
+            const now = Date.now();
+            let cId = userData?.commanderId || generateCommanderId();
+
+            if (!userData?.commanderId) batch.set(db.collection('friend_codes').doc(cId), { uid: currentUser.uid, username: username });
+            else batch.update(db.collection('friend_codes').doc(cId), { username: username });
+            
+            if (userData && userData.username) batch.delete(db.collection('usernames').doc(userData.username));
+            batch.set(db.collection('usernames').doc(username), { uid: currentUser.uid });
+
+            batch.set(db.collection('users').doc(currentUser.uid), {
+                username: username,
+                usernameLastChanged: now,
+                commanderId: cId,
+                uid: currentUser.uid,
+                photoURL: currentUser.photoURL,
+                email: currentUser.email,
+                joined: userData?.joined || firebase.firestore.FieldValue.serverTimestamp(),
+                friends: userData?.friends || []
+            }, { merge: true });
+
+            await batch.commit();
+            window.location.reload();
+        } catch (e) {
+            errorMsg.innerText = "System Error: " + e.message; errorMsg.style.display = 'block';
+            btn.disabled = false;
+        }
+    }
+
+    // --- SOCIAL & ONLINE STATUS (REAL-TIME) ---
+    function loadSocialData() {
+        if (!currentUser) return;
+        
+        // Listen for requests
+        db.collection('friend_requests').where('toUid', '==', currentUser.uid).onSnapshot(snap => {
+            const list = document.getElementById('requests-list');
+            const badge = document.getElementById('req-badge');
+            let html = '';
+            snap.forEach(doc => {
+                const data = doc.data();
+                html += `<div class="req-item"><div style="flex:1;"><div style="color:white; font-size:0.9rem;">${data.fromName}</div></div><button onclick="acceptRequest('${doc.id}', '${data.fromUid}', '${data.fromName}')" class="friend-btn unblock"><i class="fas fa-check"></i></button><button onclick="rejectRequest('${doc.id}')" class="friend-btn block"><i class="fas fa-times"></i></button></div>`;
+            });
+            list.innerHTML = html || '<div style="text-align:center; color:#666; padding-top:20px;">No pending requests.</div>';
+            badge.style.display = snap.size > 0 ? 'flex' : 'none';
+            badge.innerText = snap.size;
+        });
+
+        // Listen for friends list changes
+        if(userData && userData.friends) renderFriendsList(userData.friends);
+    }
+
+    function renderFriendsList(friendsArr) {
+        const list = document.getElementById('friends-list');
+        // Clear old listeners
+        friendStatusUnsubs.forEach(unsub => unsub());
+        friendStatusUnsubs = [];
+
+        if (!friendsArr || friendsArr.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#666; margin-top:20px;">No allies connected.</div>';
+            return;
+        }
+
+        let html = '';
+        friendsArr.forEach(f => {
+            html += `<div class="friend-item" onclick="openChat('${f.uid}', '${f.username}')">
+                    <img src="https://ui-avatars.com/api/?name=${f.username}&background=random" class="f-avatar">
+                    <div style="flex:1; text-align:left;">
+                        <div style="color:white; font-size:0.9rem;">${f.username}</div>
+                        <div style="color:#666; font-size:0.75rem;" id="status-${f.uid}"><div class="status-dot"></div> Offline</div>
+                    </div>
+                    <div class="friend-actions"><i class="far fa-comment-alt" style="color:#666"></i></div>
+                </div>`;
+            
+            // Activate Real-Time Listener for this friend
+            monitorFriendStatus(f.uid);
+        });
+        list.innerHTML = html;
+    }
+
+    function monitorFriendStatus(uid) {
+        const unsub = db.collection('users').doc(uid).onSnapshot(doc => {
+            if(doc.exists) {
+                const data = doc.data();
+                const lastSeen = data.lastSeen || 0;
+                // Considered online if active in last 2 minutes
+                const isOnline = (Date.now() - lastSeen) < 120000; 
+                const el = document.getElementById(`status-${uid}`);
+                if(el) {
+                    el.innerHTML = isOnline ? 
+                        `<div class="status-dot online"></div> <span style="color:#00ff88">Online</span>` : 
+                        `<div class="status-dot offline"></div> Offline`;
+                }
+            }
+        });
+        friendStatusUnsubs.push(unsub);
+    }
+
+    function startHeartbeat() {
+        if(heartbeatInterval) clearInterval(heartbeatInterval);
+        const beat = async () => { if(currentUser) await db.collection("users").doc(currentUser.uid).update({ lastSeen: Date.now() }); };
+        beat(); // Beat immediately
+        heartbeatInterval = setInterval(beat, 60000); // Then every 60s
+    }
+
+    async function sendInvite() {
+        const input = document.getElementById('invite-input-tab');
+        const msg = document.getElementById('invite-msg-tab');
+        const code = input.value.trim();
+        if (code.length !== 16) { msg.innerText = "Invalid ID."; msg.style.color = 'red'; return; }
+        
+        try {
+            msg.innerText = "Scanning...";
+            const codeDoc = await db.collection('friend_codes').doc(code).get();
+            if (!codeDoc.exists) { msg.innerText = "ID not found."; msg.style.color = 'red'; return; }
+            const targetUid = codeDoc.data().uid;
+            if (targetUid === currentUser.uid) { msg.innerText = "Cannot invite self."; return; }
+            if (userData.friends && userData.friends.some(f => f.uid === targetUid)) { msg.innerText = "Already allies."; return; }
+            await db.collection('friend_requests').add({ fromUid: currentUser.uid, fromName: userData.username, toUid: targetUid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            msg.innerText = "Signal sent!"; msg.style.color = '#0f0'; input.value = '';
+        } catch (e) { msg.innerText = "Error."; msg.style.color = 'red'; }
+    }
+
+    async function acceptRequest(reqId, fromUid, fromName) {
+        const batch = db.batch();
+        batch.update(db.collection('users').doc(currentUser.uid), { friends: firebase.firestore.FieldValue.arrayUnion({ uid: fromUid, username: fromName }) });
+        batch.update(db.collection('users').doc(fromUid), { friends: firebase.firestore.FieldValue.arrayUnion({ uid: currentUser.uid, username: userData.username }) });
+        batch.delete(db.collection('friend_requests').doc(reqId));
+        await batch.commit();
+        window.location.reload();
+    }
+
+    function rejectRequest(reqId) { db.collection('friend_requests').doc(reqId).delete(); }
+
+    function openChat(friendUid, friendName) {
+        document.getElementById('chat-friend-name').innerText = friendName;
+        document.getElementById('chat-interface').classList.add('open');
+        activeChatId = [currentUser.uid, friendUid].sort().join('_');
+        
+        const msgContainer = document.getElementById('chat-msgs');
+        msgContainer.innerHTML = '<div style="text-align:center; color:#666; margin-top:20px;">Decryption in progress...</div>';
+        if(chatUnsub) chatUnsub();
+
+        chatUnsub = db.collection('chats').doc(activeChatId).collection('messages').orderBy('timestamp', 'asc').limit(50)
+            .onSnapshot(snap => {
+                msgContainer.innerHTML = '';
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const div = document.createElement('div');
+                    div.className = `msg ${d.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
+                    div.innerText = d.text;
+                    msgContainer.appendChild(div);
+                });
+                msgContainer.scrollTop = msgContainer.scrollHeight;
+            });
+    }
+
+    function closeChat() { document.getElementById('chat-interface').classList.remove('open'); if (chatUnsub) chatUnsub(); }
+    function sendMessage() {
+        const input = document.getElementById('chat-input');
+        if (!input.value.trim() || !activeChatId) return;
+        db.collection('chats').doc(activeChatId).collection('messages').add({ text: input.value.trim(), senderId: currentUser.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        db.collection('chats').doc(activeChatId).set({ participants: activeChatId.split('_') }, { merge: true });
+        input.value = '';
+    }
+    function handleChatKey(e) { if (e.key === 'Enter') sendMessage(); }
+
+    // --- UI HELPERS ---
+    function toggleSocialPanel() { if (!currentUser) { alert("Authentication required."); return; } document.getElementById('social-panel').classList.toggle('active'); }
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.social-view').forEach(v => v.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(`view-${tab}`).classList.add('active');
+    }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function closeUsernameModal() { if(userData?.username) document.getElementById('username-modal').classList.remove('active'); }
+    
+    function filterCat(cat) {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        const grid = document.getElementById('game-grid'); grid.innerHTML = '';
+        (cat === 'All' ? gameData : gameData.filter(g => g.cat === cat)).forEach(g => grid.appendChild(createCard(g)));
+        observeElements(); // Re-attach observer for new elements
+    }
+    function filterGames() {
+        const q = document.getElementById('search-input').value.toLowerCase();
+        const grid = document.getElementById('game-grid'); grid.innerHTML = '';
+        gameData.filter(g => g.title.toLowerCase().includes(q)).forEach(g => grid.appendChild(createCard(g)));
+        observeElements(); // Re-attach observer for new elements
+    }
+    function openGame(url, title, cat) {
+        const gv = document.getElementById('game-viewer');
+        gv.style.display = 'block'; setTimeout(() => gv.classList.add('active'), 10);
+        document.getElementById('game-frame').src = url;
+        document.getElementById('gv-title').innerText = title;
+        document.getElementById('gv-cat').innerText = cat;
+    }
+    function closeGame() {
+        const gv = document.getElementById('game-viewer'); gv.classList.remove('active');
+        setTimeout(() => { gv.style.display = 'none'; document.getElementById('game-frame').src = ""; }, 300);
+    }
+    function toggleFull() {
+        const el = document.getElementById('gf-wrapper');
+        !document.fullscreenElement ? el.requestFullscreen().catch(e=>console.log(e)) : document.exitFullscreen();
+    }
+    function goHome() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    
+    // --- MAIN ---
+    let heartbeatInterval = null;
+
+    window.onload = () => { 
+        document.getElementById('loader').style.opacity = '0'; 
+        setTimeout(() => document.getElementById('loader').style.display = 'none', 500); 
+        render(); 
+    };
+
+</script>
+</body>
+</html>
