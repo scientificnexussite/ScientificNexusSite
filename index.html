@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050507">
+    <meta name="description" content="Scientific Nexus Research Terminal - Advanced Physics & Strategy Simulations">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>Scientific Nexus | Research Terminal 2.0</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <link rel="manifest" href="/manifest.json">
+
+    <style>
+        :root { 
+            /* --- COLOR PALETTE --- */
+            --cyan: #00f2ff; 
+            --cyan-glow: rgba(0, 242, 255, 0.4);
+            --cyan-dim: rgba(0, 242, 255, 0.1);
+            --purple: #bc13fe; 
+            --dark: #050507; 
+            --panel-bg: rgba(15, 15, 20, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --header-h: 70px;
+            --danger: #ff4444;
+            --success: #00ff88;
+            --gold: #ffd700;
+            
+            /* --- TYPOGRAPHY --- */
+            --font-main: 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+        }
+        
+        * { 
+            box-sizing: border-box; 
+            outline: none; 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; -webkit-user-select: none;
+        }
+        
+        /* TEXT SELECTION ALLOWED FOR INPUTS */
+        input, textarea, .selectable-text { 
+            user-select: text !important; 
+            -webkit-user-select: text !important; 
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* CRITICAL: Prevent horizontal wobble */
+        }
+
+        body { 
+            background-color: var(--dark);
+            color: #e0e0e0; 
+            font-family: var(--font-main); 
+            overscroll-behavior-y: none; 
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        /* --- PERFORMANCE OPTIMIZED BACKGROUND LAYER (Parallax Fix) --- */
+        #fixed-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: 
+                radial-gradient(circle at 50% 0%, #1a1a2e 0%, transparent 70%),
+                linear-gradient(0deg, rgba(0,0,0,0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.2) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            z-index: -10;
+            transform: translateZ(0); /* Force Hardware Acceleration */
+            pointer-events: none;
+            will-change: transform;
+        }
+
+        /* --- OPTIMIZED CRT & SCANLINE EFFECT --- */
+        .crt-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px; /* Increased size for performance */
+            pointer-events: none; z-index: 9000;
+            will-change: transform; /* Hint to browser */
+            transform: translate3d(0, 0, 0); /* Force GPU */
+            animation: scanlineScroll 10s linear infinite;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.6);
+        }
+        @keyframes scanlineScroll { 
+            0% { background-position: 0 0; } 
+            100% { background-position: 0 100%; } 
+        }
+
+        /* --- LOADER --- */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark);
+            z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease, visibility 0.5s; pointer-events: all;
+            will-change: opacity;
+        }
+        #loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        
+        .spinner {
+            width: 60px; height: 60px; 
+            border: 2px solid var(--cyan-dim); 
+            border-top: 2px solid var(--cyan); 
+            border-radius: 50%; 
+            animation: spin 0.8s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+            box-shadow: 0 0 15px var(--cyan-dim);
+            will-change: transform;
+            transform: translateZ(0);
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- PERSISTENT ANIMATION SYSTEM --- */
+        /* Hidden State */
+        .reveal-on-scroll {
+            opacity: 0; 
+            transform: translate3d(0, 40px, 0) scale(0.95);
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.6s ease;
+            will-change: transform, opacity;
+        }
+        /* Active State - Triggered every time it enters viewport */
+        .reveal-on-scroll.active { 
+            opacity: 1; 
+            transform: translate3d(0, 0, 0) scale(1); 
+        }
+
+        /* --- TOASTS --- */
+        #nexus-toast-container {
+            position: fixed; top: 90px; right: 20px; z-index: 7000;
+            display: flex; flex-direction: column; gap: 12px; pointer-events: none;
+            width: auto; max-width: 90vw;
+        }
+        .nexus-toast {
+            background: rgba(10, 15, 20, 0.95);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--cyan);
+            padding: 15px; width: 320px; max-width: 100%;
+            border-radius: 4px; pointer-events: auto;
+            transform: translate3d(120%, 0, 0); 
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            will-change: transform;
+            display: flex; align-items: start; gap: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        .nexus-toast.active { transform: translate3d(0, 0, 0); }
+        .nt-icon { color: var(--cyan); font-size: 1.2rem; margin-top: 2px; }
+        .nt-content h4 { margin: 0 0 5px; font-size: 0.9rem; color: #fff; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px; }
+        .nt-content p { margin: 0; font-size: 0.85rem; color: #aaa; line-height: 1.4; }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 5%; 
+            background: rgba(5, 5, 7, 0.9); 
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); /* Optimized Blur */
+            position: fixed; width: 100%; top: 0; z-index: 1000; 
+            border-bottom: 1px solid var(--glass-border);
+            height: var(--header-h); transition: height 0.3s ease;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+            transform: translateZ(0); 
+        }
+        .logo { 
+            font-family: var(--font-mono); font-weight: 700; color: var(--cyan); 
+            letter-spacing: 2px; font-size: 1.2rem; 
+            text-transform: uppercase; display: flex; align-items: center; gap: 12px; cursor: pointer;
+            text-shadow: 0 0 15px var(--cyan-glow);
+        }
+        .user-nav { display: flex; align-items: center; gap: 15px; }
+        .auth-btn {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--cyan);
+            padding: 8px 18px; border-radius: 2px; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 10px; font-family: var(--font-mono);
+            font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
+        }
+        .auth-btn:hover { 
+            border-color: var(--cyan); background: var(--cyan-dim); 
+            box-shadow: 0 0 15px var(--cyan-dim); text-shadow: 0 0 8px var(--cyan);
+        }
+        .user-avatar { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--cyan); object-fit: cover; }
+
+        #app-content { 
+            padding-top: var(--header-h); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            padding-bottom: 80px; 
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            padding: clamp(60px, 10vh, 100px) 20px 40px; text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+            position: relative;
+        }
+        .hero h1 {
+            font-family: var(--font-mono);
+            font-size: clamp(1.8rem, 5vw, 3.5rem); 
+            margin: 0 0 15px;
+            color: white; text-transform: uppercase; letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+        .hero p { 
+            color: var(--cyan); font-size: clamp(0.9rem, 2vw, 1.1rem); 
+            letter-spacing: 2px; text-transform: uppercase; opacity: 0.9; 
+            font-family: var(--font-mono);
+        }
+
+        /* --- AD CONTAINER --- */
+        .ad-uplink-container {
+            width: min(95%, 1400px); /* Responsive Clamp */
+            margin: 30px auto 10px; padding: 2px;
+            background: repeating-linear-gradient(45deg, rgba(0,0,0,0), rgba(0,0,0,0) 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px);
+            border: 1px dashed var(--glass-border);
+            text-align: center; border-radius: 4px; overflow: hidden;
+        }
+        .ad-label {
+            font-size: 0.6rem; color: #555; text-transform: uppercase; font-family: var(--font-mono);
+            letter-spacing: 2px; margin: 8px 0; display: block;
+        }
+
+        /* --- CONTROLS --- */
+        .controls { 
+            width: min(100%, 1400px); 
+            margin: 20px auto; 
+            padding: 0 clamp(10px, 3vw, 20px); 
+        }
+        
+        /* Laser Search Bar */
+        .search-bar {
+            background: var(--panel-bg); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 4px;
+            padding: 0 20px; 
+            display: flex; align-items: center; gap: 15px; margin-bottom: 30px;
+            transition: all 0.3s; height: 60px; position: relative; overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transform: translateZ(0);
+        }
+        .search-bar:focus-within { border-color: var(--cyan); box-shadow: 0 0 20px var(--cyan-dim); }
+        .search-bar i { color: #666; transition: color 0.3s; }
+        .search-bar:focus-within i { color: var(--cyan); }
+        .search-bar input { 
+            background: transparent; border: none; color: white; width: 100%; height: 100%;
+            font-size: 1.1rem; font-family: var(--font-main); letter-spacing: 1px; z-index: 2; 
+        }
+        
+        .search-bar::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 40%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.3), transparent);
+            transform: skewX(-20deg); pointer-events: none; z-index: 1;
+        }
+        .search-bar:focus-within::after { animation: laserScan 1s ease-in-out; }
+        @keyframes laserScan { 0% { left: -50%; } 100% { left: 150%; } }
+        
+        /* Categories Scroll */
+        .categories { 
+            display: flex; gap: 15px; overflow-x: auto; padding: 5px 5px 20px; 
+            scrollbar-width: none; -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x mandatory;
+        }
+        .categories::-webkit-scrollbar { display: none; }
+        
+        .cat-btn {
+            background: rgba(255,255,255,0.03); color: #888; border: 1px solid var(--glass-border); 
+            padding: 10px 24px; border-radius: 2px;
+            white-space: nowrap; cursor: pointer; font-size: 0.9rem; font-family: var(--font-mono);
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s;
+            flex-shrink: 0; scroll-snap-align: start; position: relative; overflow: hidden;
+            transform: translateZ(0);
+        }
+        .cat-btn:hover { background: rgba(255,255,255,0.08); color: white; border-color: #666; }
+        .cat-btn.active { 
+            background: var(--cyan-dim); color: var(--cyan); border-color: var(--cyan); 
+            box-shadow: 0 0 15px var(--cyan-dim); text-shadow: 0 0 5px var(--cyan);
+        }
+        .cat-btn.active::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+            background: var(--cyan); animation: hologlow 2s infinite;
+        }
+        @keyframes hologlow { 0% { opacity: 0.5; } 50% { opacity: 1; box-shadow: 0 0 10px var(--cyan); } 100% { opacity: 0.5; } }
+
+        /* --- DYNAMIC GAME GRID (Optimized) --- */
+        .grid { 
+            display: grid; gap: 25px; 
+            padding: 0 clamp(10px, 3vw, 20px) 40px; 
+            max-width: 1400px; margin: 0 auto;
+            /* UPGRADE: Fluid Grid System */
+            grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 45vw, 280px), 1fr)); 
+            width: 100%;
+        }
+
+        .card { 
+            background: var(--panel-bg); 
+            border: 1px solid var(--glass-border); border-radius: 6px; overflow: hidden;
+            position: relative; cursor: pointer; 
+            /* Performance: Hardware accel */
+            transition: border-color 0.3s, box-shadow 0.3s;
+            display: flex; flex-direction: column;
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            transform: translateZ(0); 
+        }
+        .card:hover { 
+            border-color: var(--cyan); 
+            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.1); 
+        }
+        
+        .thumb { 
+            height: 180px; width: 100%; object-fit: cover; opacity: 0.8; 
+            transition: opacity 0.3s, transform 0.5s; background: #000; display: block;
+        }
+        .card:hover .thumb { opacity: 1; transform: scale(1.05); }
+        
+        .card-body { 
+            padding: 15px; border-top: 1px solid var(--glass-border); 
+            flex: 1; display: flex; flex-direction: column; justify-content: center; 
+            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 100%);
+            z-index: 2; position: relative;
+        }
+        .card-title { 
+            margin: 0; font-size: 1rem; color: white; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            letter-spacing: 0.5px; font-weight: 600;
+        }
+        .card-cat { 
+            color: var(--cyan); font-size: 0.7rem; margin-top: 5px; 
+            display: block; text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-mono);
+        }
+
+        /* --- PAGINATION STYLES --- */
+        .pagination-container {
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            margin: 0 auto 40px; padding: 20px; max-width: 1400px;
+        }
+        .page-btn {
+            background: rgba(10, 15, 20, 0.6);
+            border: 1px solid var(--glass-border);
+            color: #666;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-mono); font-size: 0.9rem;
+            cursor: pointer; clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%);
+            transition: all 0.2s ease;
+        }
+        .page-btn:hover {
+            border-color: var(--cyan); color: white;
+            transform: translate3d(0, -2px, 0);
+        }
+        .page-btn.active {
+            background: var(--cyan-dim);
+            border-color: var(--cyan);
+            color: var(--cyan);
+            box-shadow: 0 0 15px var(--cyan-dim);
+            font-weight: bold;
+        }
+        .page-btn.disabled { opacity: 0.3; pointer-events: none; }
+
+        /* --- GAME VIEWER (FULLSCREEN) --- */
+        #game-viewer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 5000; 
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
+            display: none; opacity: 0; transition: opacity 0.4s ease;
+            will-change: opacity;
+        }
+        #game-viewer.active { opacity: 1; }
+
+        .gv-nav {
+            height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+            border-bottom: 1px solid var(--glass-border); background: rgba(10,10,15,0.95);
+            position: sticky; top: 0; z-index: 5001; 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        .back-btn { 
+            background: transparent; border: 1px solid var(--danger); color: var(--danger); 
+            padding: 6px 14px; border-radius: 2px; cursor: pointer; 
+            display: flex; align-items: center; gap: 8px; font-size: 0.8rem; 
+            text-transform: uppercase; letter-spacing: 1px; transition: 0.2s;
+            font-family: var(--font-mono);
+        }
+        .back-btn:hover { background: var(--danger); color: black; box-shadow: 0 0 15px rgba(255, 68, 68, 0.4); }
+
+        .gv-stage { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        
+        .game-frame-wrapper {
+            position: relative; width: 100%; padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            background: black; border: 1px solid #333; border-radius: 4px; overflow: hidden;
+            box-shadow: 0 0 60px rgba(0, 242, 255, 0.08);
+        }
+        .game-loader-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: #050507; display: flex; align-items: center; justify-content: center;
+            z-index: 5;
+        }
+        
+        .game-frame-wrapper iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; z-index: 10;
+        }
+        
+        .game-meta { 
+            margin-top: 25px; background: var(--panel-bg); padding: 25px; 
+            border: 1px solid var(--glass-border); border-radius: 4px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;
+        }
+        .fs-btn {
+            background: transparent; color: #aaa; border: 1px solid var(--glass-border); 
+            padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: 0.2s;
+        }
+        .fs-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+        /* --- MODALS --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); 
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            z-index: 6000; display: none; align-items: center; justify-content: center;
+            padding: 20px;
+            opacity: 0; transition: opacity 0.3s;
+            will-change: opacity;
+        }
+        .modal.active { display: flex; opacity: 1; }
+        
+        .modal-box { 
+            background: #0a0b10; padding: 35px; border-radius: 8px; border: 1px solid var(--glass-border); 
+            width: 100%; max-width: 450px; text-align: center; position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
+            max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+        }
+        .modal-box.large {
+            max-width: 800px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+        }
+        .protocol-content {
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-top: 15px;
+            color: #ccc;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+        .protocol-content h3 { 
+            color: var(--cyan); margin-top: 30px; border-bottom: 1px solid #333; 
+            padding-bottom: 8px; text-transform: uppercase; letter-spacing: 2px; 
+            font-size: 1.1rem; font-family: var(--font-mono);
+        }
+
+        .close-modal { position: absolute; top: 15px; right: 20px; color: #666; cursor: pointer; font-size: 1.8rem; transition: 0.2s; }
+        .close-modal:hover { color: white; }
+
+        .modal-input {
+            width: 100%; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid #333; 
+            color: white; border-radius: 4px; margin-bottom: 15px; font-size: 1.1rem; color: var(--cyan);
+            font-family: var(--font-mono); text-align: center; letter-spacing: 2px;
+        }
+        .modal-input:focus { border-color: var(--cyan); background: rgba(0,242,255,0.05); }
+
+        .action-btn {
+            background: var(--cyan); color: #000; border: none; padding: 14px; 
+            width: 100%; border-radius: 4px; cursor: pointer; font-weight: 700; margin-top: 10px;
+            text-transform: uppercase; letter-spacing: 2px; transition: 0.3s;
+            font-family: var(--font-mono);
+        }
+        .action-btn:hover { background: #fff; box-shadow: 0 0 20px var(--cyan); }
+        .action-btn:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; }
+
+        /* --- SOCIAL SYSTEM & CHAT --- */
+        #social-fab {
+            position: fixed; bottom: 30px; right: 30px;
+            width: 65px; height: 65px; background: rgba(10,10,15,0.9); 
+            border: 1px solid var(--cyan); 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-radius: 50%; display: none; align-items: center; justify-content: center;
+            color: var(--cyan); font-size: 1.6rem; cursor: pointer; z-index: 4000;
+            box-shadow: 0 0 20px var(--cyan-dim); transition: all 0.3s;
+            touch-action: manipulation;
+            transform: translateZ(0); 
+        }
+        #social-fab:hover { background: var(--cyan-dim); transform: scale(1.1) translateZ(0); box-shadow: 0 0 30px var(--cyan); }
+        
+        .fab-badge {
+            position: absolute; top: -2px; right: -2px; background: var(--danger); color: white;
+            width: 24px; height: 24px; border-radius: 50%; font-size: 0.75rem; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; display: none;
+            box-shadow: 0 0 10px var(--danger);
+        }
+
+        #social-panel {
+            position: fixed; bottom: 110px; right: 30px; 
+            width: 380px; max-width: 90vw;
+            height: 600px; max-height: 70vh;
+            background: #0a0a0e; border: 1px solid var(--glass-border); border-radius: 12px;
+            z-index: 3999; 
+            transform: translate3d(130%, 0, 0); 
+            transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            will-change: transform;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+        }
+        #social-panel.active { transform: translate3d(0, 0, 0); }
+        
+        .social-tabs { display: flex; border-bottom: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); }
+        .tab-btn { 
+            flex: 1; padding: 18px 5px; background: none; border: none; color: #666; 
+            cursor: pointer; border-bottom: 2px solid transparent; font-size: 0.75rem; 
+            font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-mono);
+        }
+        .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); background: rgba(0, 242, 255, 0.03); }
+
+        .social-body { flex: 1; overflow-y: auto; position: relative; -webkit-overflow-scrolling: touch; }
+        .social-view { display: none; padding: 0; }
+        .social-view.active { display: block; }
+        
+        .friend-item, .req-item {
+            display: flex; align-items: center; gap: 12px; padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s;
+        }
+        .friend-item:hover { background: rgba(255,255,255,0.05); cursor: pointer; }
+        .f-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #444; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.offline { background: #555; }
+
+        /* Chat Interface */
+        #chat-interface {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0b0b10; z-index: 50; display: flex; flex-direction: column;
+            transform: translate3d(100%, 0, 0); 
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            will-change: transform;
+        }
+        #chat-interface.open { transform: translate3d(0, 0, 0); }
+        .chat-header { 
+            padding: 15px; background: #121218; border-bottom: 1px solid var(--glass-border); 
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+        .chat-messages { 
+            flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; 
+            background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
+            -webkit-overflow-scrolling: touch;
+        }
+        .msg { max-width: 80%; padding: 10px 14px; border-radius: 6px; font-size: 0.9rem; word-wrap: break-word; line-height: 1.4; }
+        .msg.mine { align-self: flex-end; background: var(--cyan); color: black; border-bottom-right-radius: 0; }
+        .msg.theirs { align-self: flex-start; background: #222; color: white; border: 1px solid #333; border-bottom-left-radius: 0; }
+        
+        .chat-input-area { padding: 15px; background: #121218; display: flex; gap: 10px; border-top: 1px solid var(--glass-border); }
+        .chat-input { 
+            flex: 1; background: #050507; border: 1px solid #333; color: white; padding: 10px 12px; 
+            border-radius: 4px; font-family: var(--font-main); 
+        }
+        .chat-input:focus { border-color: var(--cyan); }
+
+        .alert-box { border: 1px solid var(--danger); box-shadow: 0 0 40px rgba(255, 68, 68, 0.2); }
+        .alert-btns { display: flex; gap: 10px; margin-top: 25px; }
+        .alert-btn { 
+            flex: 1; padding: 12px; border: 1px solid #333; background: transparent; color: white; 
+            cursor: pointer; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; font-family: var(--font-mono);
+        }
+        .alert-btn.confirm { background: rgba(255, 68, 68, 0.1); border-color: var(--danger); color: var(--danger); }
+        .alert-btn.confirm:hover { background: var(--danger); color: white; }
+
+        /* --- "POLICE" / TACTICAL PROFILE OVERHAUL --- */
+        #profile-modal .modal-box {
+            max-width: 700px;
+            background: rgba(10, 12, 16, 0.95);
+            border: 1px solid var(--cyan-dim);
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.15), inset 0 0 100px rgba(0,0,0,0.8);
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            clip-path: polygon(
+                0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 
+                20px 100%, 0 calc(100% - 20px)
+            );
+        }
+
+        .dossier-container {
+            display: flex;
+            flex-direction: row;
+            min-height: 400px;
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .dossier-left {
+            width: 250px;
+            background: rgba(0,0,0,0.3);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            flex-shrink: 0; 
+        }
+
+        .dossier-photo-frame {
+            width: 120px; height: 120px;
+            border: 2px solid var(--cyan);
+            padding: 5px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .dossier-photo-frame img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: grayscale(0.5) contrast(1.2);
+        }
+
+        .dossier-scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+            animation: scanPhoto 3s ease-in-out infinite;
+            opacity: 0.7;
+        }
+        @keyframes scanPhoto { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+
+        .dossier-right {
+            flex: 1;
+            padding: 30px;
+            text-align: left;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dossier-header {
+            border-bottom: 1px solid var(--cyan-dim);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            flex-wrap: wrap; 
+            gap: 10px;
+        }
+        .dh-title { font-family: var(--font-mono); color: var(--cyan); font-size: 0.8rem; letter-spacing: 2px; }
+        .dh-name { font-size: 1.8rem; text-transform: uppercase; font-weight: 700; color: white; margin: 5px 0 0; word-break: break-all; }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .data-cell {
+            background: rgba(255,255,255,0.03);
+            padding: 10px;
+            border-left: 2px solid var(--cyan-dim);
+        }
+        .data-label { font-size: 0.65rem; color: #666; font-family: var(--font-mono); display: block; letter-spacing: 1px; }
+        .data-value { font-size: 0.95rem; color: #ddd; font-weight: 500; }
+
+        .xp-section { margin-top: 20px; }
+        .xp-hud-bar {
+            height: 12px;
+            background: #111;
+            border: 1px solid #333;
+            margin-top: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        .xp-hud-fill {
+            height: 100%;
+            background: repeating-linear-gradient(
+                90deg, 
+                var(--cyan) 0px, 
+                var(--cyan) 4px, 
+                transparent 4px, 
+                transparent 6px
+            );
+            width: 0%;
+            transition: width 1s ease;
+            box-shadow: 0 0 10px var(--cyan-dim);
+        }
+
+        .badge-rack {
+            display: flex; gap: 10px; margin-top: 25px; flex-wrap: wrap;
+        }
+        .rack-slot {
+            width: 40px; height: 40px;
+            border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            color: #333;
+            font-size: 1.2rem;
+        }
+        .rack-slot.earned {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(255, 215, 0, 0.05);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        .dossier-actions {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 20px;
+        }
+
+        .footer-terminal {
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+            border-top: 1px solid var(--glass-border);
+            font-size: 0.8rem;
+            color: #555;
+            background: rgba(0,0,0,0.2);
+            font-family: var(--font-mono);
+        }
+        .footer-link {
+            color: #777; text-decoration: none; border-bottom: 1px solid transparent; transition: 0.2s;
+            cursor: pointer; display: inline-block; margin: 0 15px;
+        }
+        .footer-link:hover { color: var(--cyan); border-color: var(--cyan); }
+
+        /* =========================================
+           UNIVERSAL RESPONSIVE SYSTEM
+           ========================================= */
+        @media screen and (max-width: 768px) {
+            :root { --header-h: 60px; }
+            nav { padding: 0 15px; }
+            .logo { font-size: 1rem; }
+            
+            .hero { padding: 40px 15px 20px; }
+            
+            /* Responsive Grid: 1 Column on Mobile for standard view */
+            .grid { 
+                grid-template-columns: 1fr; 
+                gap: 20px; 
+            }
+            .card { margin: 0; }
+            .thumb { height: 180px; }
+            
+            /* --- FIXED: PROFILE MODAL MOBILE RESPONSIVENESS --- */
+            .modal-box { 
+                padding: 0; 
+                width: 95%; 
+                max-height: 90vh; 
+                display: flex; 
+                flex-direction: column;
+            }
+            
+            .dossier-container { 
+                flex-direction: column; 
+                width: 100%;
+                overflow-y: auto; 
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .dossier-left { 
+                width: 100%; 
+                border-right: none; 
+                border-bottom: 1px solid var(--glass-border); 
+                padding: 20px; 
+                flex-direction: row; 
+                gap: 20px;
+                justify-content: flex-start;
+                text-align: left;
+            }
+            
+            .dossier-photo-frame {
+                margin-bottom: 0; 
+                width: 80px; height: 80px; 
+                flex-shrink: 0;
+            }
+            
+            .dossier-right { 
+                padding: 20px; 
+                height: auto;
+            }
+            
+            .data-grid { grid-template-columns: 1fr; }
+            
+            .close-modal { top: 10px; right: 15px; z-index: 200; background: rgba(0,0,0,0.5); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;}
+
+            .gv-stage { padding: 0; width: 100%; margin: 10px auto; }
+            .game-frame-wrapper { border-radius: 0; border-left: none; border-right: none; }
+            
+            .game-meta { 
+                flex-direction: column; align-items: flex-start; gap: 15px; 
+                margin: 0 15px 20px; border-radius: 6px;
+            }
+            .game-meta div { width: 100%; display: flex; justify-content: space-between; }
+            
+            #social-panel {
+                width: 100%; height: 100%; bottom: 0; right: 0; max-width: 100%; max-height: 100%; border-radius: 0;
+            }
+            #social-fab { bottom: 20px; right: 20px; width: 55px; height: 55px; }
+        }
+        
+        /* Tablet Breakpoint */
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6504872858297214" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="fixed-bg"></div>
+
+<div class="crt-overlay"></div>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div id="nexus-toast-container"></div>
+
+<nav>
+    <div class="logo" onclick="goHome()">
+        <i class="fas fa-atom fa-spin-pulse" style="--fa-animation-duration: 3s;"></i>
+        <span>SCIENTIFIC NEXUS</span>
+    </div>
+    <div class="user-nav" id="auth-container">
+        <span style="font-size:0.75rem; color:#666; font-family:var(--font-mono);">INITIALIZING UPLINK...</span>
+    </div>
+</nav>
+
+<div id="app-content">
+    <div class="hero reveal-on-scroll">
+        <h1>Research Terminal</h1>
+        <p>Advanced Tactical Simulations & Physics Modules</p>
+    </div>
+
+    <div class="ad-uplink-container reveal-on-scroll">
+        <span class="ad-label">Sponsored Uplink Protocol // AD-NET</span>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-6504872858297214"
+             data-ad-slot="5786114760"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
+    <div class="controls reveal-on-scroll">
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="SEARCH DATABASE..." onkeyup="filterGames()">
+        </div>
+        
+        <div class="categories">
+            <button class="cat-btn active" onclick="filterCat('All')">All</button>
+            <button class="cat-btn" onclick="filterCat('Action')">Action</button>
+            <button class="cat-btn" onclick="filterCat('Strategy')">Strategy</button>
+            <button class="cat-btn" onclick="filterCat('Physics')">Physics</button>
+            <button class="cat-btn" onclick="filterCat('Puzzle')">Puzzle</button>
+            <button class="cat-btn" onclick="filterCat('Simulation')">Simulation</button>
+            <button class="cat-btn" onclick="filterCat('Arcade')">Arcade</button>
+            <button class="cat-btn" onclick="filterCat('Sports & Racing')">Sports & Racing</button>
+            <button class="cat-btn" onclick="filterCat('Casual')">Casual</button>
+            <button class="cat-btn" onclick="filterCat('Educational')">Educational</button>
+        </div>
+    </div>
+
+    <div class="grid" id="game-grid"></div>
+    
+    <div id="pagination-controls" class="pagination-container reveal-on-scroll"></div>
+    
+    <div class="footer-terminal reveal-on-scroll">
+        <div style="margin-bottom: 15px; font-weight:bold;">SCIENTIFIC NEXUS TERMINAL v2.0 // EST. 2024</div>
+        <span class="footer-link" onclick="openProtocols()">NEXUS PROTOCOLS</span>
+        <span class="footer-link" onclick="openProtocols()">DATA MANIFEST (PRIVACY)</span>
+        <div style="margin-top: 15px; font-size: 0.7rem; opacity: 0.5;">Optimized for Chrome / Quantum Processors</div>
+    </div>
+</div>
+
+<div id="game-viewer">
+    <div class="gv-nav">
+        <div style="display:flex; align-items:center; gap:15px;">
+             <button class="back-btn" onclick="closeGame()">
+                <i class="fas fa-times"></i> <span>Terminate</span>
+            </button>
+            <span id="gv-title" style="font-weight:bold; color:white; letter-spacing:1px; text-transform:uppercase; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family:var(--font-mono);">Simulation</span>
+        </div>
+        <button class="fs-btn" onclick="toggleFull()" title="Fullscreen"><i class="fas fa-expand"></i></button>
+    </div>
+    
+    <div class="gv-stage">
+        <div class="game-frame-wrapper" id="gf-wrapper">
+            <div class="game-loader-overlay" id="game-loader-ui">
+                <div class="spinner"></div>
+            </div>
+            <iframe id="game-frame" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock" allowfullscreen></iframe>
+        </div>
+        
+        <div class="game-meta">
+            <div>
+                <span style="color:#666; font-size:0.75rem; text-transform:uppercase; display:block; letter-spacing:1px; margin-bottom:5px;">Module Category</span>
+                <span id="gv-cat" style="color:var(--cyan); font-weight:bold; font-family:var(--font-mono); font-size:1.1rem;">Physics</span>
+            </div>
+            <div style="text-align:right;">
+                <span style="color:#666; font-size:0.75rem; text-transform:uppercase; display:block; letter-spacing:1px; margin-bottom:5px;">System Rating</span>
+                <span style="color:var(--success); font-weight:bold; font-family:var(--font-mono); font-size:1.1rem;"><i class="fas fa-star" style="font-size:0.9rem;"></i> 98.4%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="social-fab" onclick="toggleSocialPanel()">
+    <i class="fas fa-users"></i>
+    <div class="fab-badge" id="global-badge">0</div>
+</div>
+
+<div id="social-panel">
+    <div id="chat-interface">
+        <div class="chat-header">
+            <div style="color:var(--cyan); font-weight:bold; font-size:1rem; font-family:var(--font-mono);" id="chat-friend-name">Unknown</div>
+            <div>
+                <button onclick="openBlockModal()" style="background:none; border:none; color:#666; cursor:pointer; margin-right:15px; font-size:1.1rem;"><i class="fas fa-ban"></i></button>
+                <button onclick="closeChat()" style="background:none; border:none; color:white; cursor:pointer; font-size:1.1rem;"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chat-msgs"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Transmission..." onkeypress="handleChatKey(event)">
+            <button onclick="sendMessage()" style="background:var(--cyan); border:none; width:40px; height:40px; border-radius:4px; cursor:pointer; color:black;"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <div class="social-tabs">
+        <button class="tab-btn active" onclick="switchTab('friends')">Allies</button>
+        <button class="tab-btn" onclick="switchTab('ranking')">Ranking</button>
+        <button class="tab-btn" onclick="switchTab('comms')">Comms</button>
+        <button class="tab-btn" onclick="switchTab('blocked')" style="color:var(--danger);">Blacklist</button>
+    </div>
+
+    <div class="social-body">
+        <div id="view-friends" class="social-view active">
+            <div id="friends-list" style="padding-bottom:20px;">
+                <div style="text-align:center; color:#666; margin-top:30px; font-size:0.8rem;">Searching neural net...</div>
+            </div>
+        </div>
+        
+        <div id="view-ranking" class="social-view" style="padding:15px;">
+            <div style="color:#666; font-size:0.75rem; text-transform:uppercase; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px; font-family:var(--font-mono);">Top Researchers</div>
+            <div id="leaderboard-list">
+                <div style="text-align:center; color:#666; padding:10px;">Connecting to Global Mainframe...</div>
+            </div>
+        </div>
+
+        <div id="view-comms" class="social-view" style="padding:15px;">
+            <div style="font-size:0.7rem; color:#666; text-transform:uppercase; margin-bottom:10px; letter-spacing:1px;">Establish Link</div>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="text" id="invite-input-tab" class="modal-input" placeholder="ENTER ID" maxlength="16" style="margin:0; font-family:var(--font-mono); text-align:center; font-size:1rem;">
+                <button onclick="sendInvite()" style="background:var(--cyan); color:black; border:none; border-radius:4px; width:50px; cursor:pointer; font-weight:bold;"><i class="fas fa-plus"></i></button>
+            </div>
+            <p id="invite-msg-tab" style="font-size:0.75rem; text-align:center; min-height:1em; margin:0 0 20px; font-family:var(--font-mono);"></p>
+            
+            <div style="font-size:0.7rem; color:#666; text-transform:uppercase; margin-bottom:10px; letter-spacing:1px;">Pending Signals</div>
+            <div id="requests-list">
+                 <div style="text-align:center; color:#666; font-size:0.8rem; padding:10px;">No incoming data.</div>
+            </div>
+        </div>
+
+        <div id="view-blocked" class="social-view">
+            <div id="blocked-list"></div>
+        </div>
+    </div>
+</div>
+
+<div id="block-confirm-modal" class="modal">
+    <div class="modal-box alert-box">
+        <h3 style="color:var(--danger); margin-top:0; font-family:var(--font-mono);">PROTOCOL ALERT</h3>
+        <p style="color:#aaa; font-size:0.9rem;">Sever communication with this entity?<br>This action cannot be undone easily.</p>
+        <div class="alert-btns">
+            <button class="alert-btn" onclick="closeModal('block-confirm-modal')">Cancel</button>
+            <button class="alert-btn confirm" onclick="confirmBlockUser()">Sever Link</button>
+        </div>
+    </div>
+</div>
+
+<div id="unblock-confirm-modal" class="modal">
+    <div class="modal-box" style="border-color:var(--cyan);">
+        <h3 style="color:var(--cyan); margin-top:0; font-family:var(--font-mono);">RESTORE LINK</h3>
+        <p style="color:#aaa; font-size:0.9rem;">Re-establish connection protocols?</p>
+        <div class="alert-btns">
+            <button class="alert-btn" onclick="closeModal('unblock-confirm-modal')">Cancel</button>
+            <button class="alert-btn" style="border-color:var(--cyan); color:var(--cyan);" onclick="confirmUnblockUser()">Restore</button>
+        </div>
+    </div>
+</div>
+
+<div id="login-modal" class="modal">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeModal('login-modal')">×</span>
+        <h2 style="color:white; margin-top:0; font-size:1.4rem; font-family:var(--font-mono);">IDENTITY VERIFICATION</h2>
+        <p style="color:#888; font-size:0.95rem; margin-bottom:25px;">Access classified saves and history.</p>
+        <button onclick="loginGoogle()" style="background:white; color:black; border:none; padding:15px; width:100%; border-radius:4px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; font-family:var(--font-mono); font-size:1rem; transition:0.2s;">
+            <i class="fab fa-google"></i> Sign in with Google
+        </button>
+    </div>
+</div>
+
+<div id="username-modal" class="modal" style="z-index: 6001;">
+    <div class="modal-box">
+        <h2 style="color:var(--cyan); margin-top:0; font-size:1.4rem; font-family:var(--font-mono);">CREATE ALIAS</h2>
+        <input type="text" id="new-username" class="modal-input" placeholder="CODENAME (3-10 CHARS)" maxlength="10">
+        <p id="username-error" style="color: var(--danger); font-size: 0.8rem; display: none; margin: 10px 0;"></p>
+        <button id="submit-btn" onclick="submitUsername()" class="action-btn">ESTABLISH ID</button>
+    </div>
+</div>
+
+<div id="profile-modal" class="modal">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeModal('profile-modal')" style="right:10px; top:5px; z-index:100;">×</span>
+        <div id="profile-content">
+            </div>
+    </div>
+</div>
+
+<div id="protocols-modal" class="modal">
+    <div class="modal-box large">
+        <span class="close-modal" onclick="closeModal('protocols-modal')">×</span>
+        <h2 style="color:var(--cyan); margin-top:0; font-size:1.6rem; letter-spacing: 2px; font-family:var(--font-mono);">NEXUS PROTOCOLS & DATA MANIFEST</h2>
+        <div class="protocol-content">
+            <h3>1.0 MISSION DIRECTIVE (ABOUT)</h3>
+            <p>The Scientific Nexus Research Terminal (SNRT) functions as a distributed digital laboratory designed to test cognitive reflexes, strategic planning, and physics comprehension through advanced simulation modules. Our platform aggregates high-fidelity HTML5 simulations, categorizing them into distinct research vectors: Kinetic Action, Structural Physics, and Cognitive Strategy.</p>
+            <p>This terminal is not merely a collection of games; it is a curated interface for users to experiment with digital physics engines. By providing a unified "Cyberpunk" interface, we streamline the user experience, allowing researchers (users) to focus on the mechanics of each module without distraction. The "XP" and "Clearance Level" systems are gamified representations of user engagement and mastery over the provided tools.</p>
+
+            <h3>2.0 NEURAL LINK PRIVACY (PRIVACY POLICY)</h3>
+            <p>At Scientific Nexus, the privacy of your data stream is paramount. This Data Manifest outlines how we handle the information transmission between your local terminal (device) and our central mainframe.</p>
+            
+            <strong>2.1 Identity Verification (Authentication)</strong>
+            <p>We utilize Google Firebase Authentication to secure user identities. When you "Initialize Uplink" (Sign In), we only receive your public identifier and email address provided by Google's secure OAuth protocols. We do not store passwords or sensitive personal credentials on our servers. This data is used solely to generate your "Commander Profile," track your XP progression, and manage your friend list.</p>
+
+            <strong>2.2 Data Retention & Chat Logs</strong>
+            <p>Communication within the Nexus (Chat System) is encrypted in transit using standard HTTPS protocols. While we facilitate real-time communication between "Allies," we advise against transmitting sensitive personal information (financial data, real-world addresses) over the public or private channels. Chat logs are stored in our secure Firestore database to allow for message history retrieval but can be purged upon request by deleting your account.</p>
+            
+            <strong>2.3 Cookie Usage & Local Storage</strong>
+            <p>This terminal employs "Cookies" and "Local Storage" mechanisms to maintain session stability. These small data packets allow the terminal to remember your "Clearance Level" and interface preferences between sessions. By navigating the Nexus, you consent to the storage of these functional packets on your device.</p>
+
+            <h3>3.0 THIRD-PARTY UPLINKS (ADVERTISING)</h3>
+            <p>To maintain the operational status of the Scientific Nexus free of charge, we utilize third-party advertising partners, specifically Google AdSense. These partners may place and read cookies on your browser or use web beacons to collect information as a result of ad serving.</p>
+            <p>Google uses the DoubleClick cookie to enable it and its partners to serve ads to users based on their visits to this terminal and/or other sites on the Internet. You may opt out of the use of the DoubleClick cookie for interest-based advertising by visiting Ads Settings. The revenue generated from these "Sponsored Uplinks" is directly allocated to server maintenance and the acquisition of new simulation modules.</p>
+
+            <h3>4.0 CONTACT & SUPPORT</h3>
+            <p>If you encounter a "Glitch in the Matrix" or require assistance with your account data, please direct inquiries to the repository maintainers via the GitHub issues page linked in the repository metadata. All simulations are the intellectual property of their respective developers, provided here under distribution licenses.</p>
+            
+            <p style="text-align:center; margin-top:40px; color:#666; font-family:var(--font-mono);"><em>// END OF LINE //</em></p>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+        getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, query, where, orderBy, limit, 
+        serverTimestamp, writeBatch, collectionGroup, setDoc, getDoc, arrayUnion, arrayRemove, increment 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // --- 1. SYSTEM INITIALIZATION ---
+    function safeInit() {
+        const loader = document.getElementById('loader');
+        if(loader && !loader.classList.contains('hidden')) {
+            loader.classList.add('hidden');
+            // Initial render with default values
+            currentFilteredGames = gameData;
+            render(); 
+        }
+    }
+    document.addEventListener("DOMContentLoaded", safeInit);
+    // Fallback if load event misses
+    setTimeout(safeInit, 2000);
+
+    // --- 2. FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCrgwoD_IVwlyvUQwDDQj6T772obSOL8So",
+        authDomain: "scientificnexus-65c48.firebaseapp.com",
+        projectId: "scientificnexus-65c48",
+        storageBucket: "scientificnexus-65c48.firebasestorage.app",
+        messagingSenderId: "125907587809",
+        appId: "1:125907587809:web:d8068604db659fa357dda0",
+        measurementId: "G-787GN5V4WT"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    let currentUser = null;
+    let userData = null; 
+    let activeChatId = null;
+    let currentChatUserUid = null;
+    let targetUnblockUid = null;
+    let chatUnsub = null;
+    let friendStatusUnsubs = [];
+    let globalMsgListener = null;
+
+    // --- 3. GAME DATABASE ---
+    const gameData = [
+       { 
+            title: "SkillFull Finger", 
+            cat: "Physics", 
+            url: "https://html5.gamedistribution.com/c7af7f58929a4a3c891ccf1192223a6a/", 
+            thumb: "https://img.gamedistribution.com/c7af7f58929a4a3c891ccf1192223a6a-1280x720.jpg" 
+       },
+       {
+         title: "Football Duel",
+         cat: "Sports & Racing",
+         url: "https://html5.gamedistribution.com/4a9c7ad53f7c48678b3b848390a62daa/",
+         thumb: "https://img.gamedistribution.com/4a9c7ad53f7c48678b3b848390a62daa-1280x720.jpg"
+       },
+       {
+        title: "Tap it Away 3D",
+        cat: "Puzzle",
+        url: "https://html5.gamedistribution.com/87cb43c5492049b49b01491248d9ced1/",
+        thumb: "https://img.gamedistribution.com/87cb43c5492049b49b01491248d9ced1-1280x720.jpg"
+       },
+       {
+         title: "Zombie Survival",
+         cat: "Action",
+         url: "https://html5.gamedistribution.com/53ad84c4f3b440f2b65d5382fadf731f/",
+         thumb: "https://img.gamedistribution.com/53ad84c4f3b440f2b65d5382fadf731f-1280x720.jpg"
+       },
+       {
+        title: "Bar Brawl",
+        cat: "Action",
+        url: "https://html5.gamedistribution.com/f3a9542e779b426799867918b11fd70b/",
+        thumb: "https://img.gamedistribution.com/f3a9542e779b426799867918b11fd70b-1280x720.jpg"
+       },
+       {
+        title: "Stick Master",
+        cat: "Strategy",
+        url: "https://html5.gamedistribution.com/a497f71f7ff64128bb9f3d4f7a58dddc/",
+        thumb: "https://img.gamedistribution.com/a497f71f7ff64128bb9f3d4f7a58dddc-512x384.jpg"
+       },
+       {
+         title: "Craft Of Wars",
+         cat: "Arcade",
+         url: "https://html5.gamedistribution.com/99b5f30d028d40df825363d98fa5831f/",
+         thumb: "https://img.gamedistribution.com/99b5f30d028d40df825363d98fa5831f-512x512.jpg"
+       },
+       {
+          title: "Coe Snake",
+          cat: "Casual",
+          url: "https://html5.gamedistribution.com/b73efc1f47194a4cbb5d0af8b492187b/",
+          thumb: "https://img.gamedistribution.com/b73efc1f47194a4cbb5d0af8b492187b-1280x720.jpg"
+       },
+       {
+          title: "Real Cargo Truck",
+          cat: "Simulation",
+          url: "https://html5.gamedistribution.com/1ea2160082d542ce8d9166f63f61d366/",
+          thumb: "https://img.gamedistribution.com/1ea2160082d542ce8d9166f63f61d366-512x384.jpg"
+       },
+       {
+          title: "Math vs Bat",
+          cat: "Educational",
+          url: "https://html5.gamedistribution.com/91c70ab32b754af89cd73528ba236d34/",
+          thumb: "https://img.gamedistribution.com/91c70ab32b754af89cd73528ba236d34-512x384.jpeg"
+       },
+       {
+          title: "Drift Boss",
+          cat: "Sports & Racing",
+          url: "https://html5.gamedistribution.com/0a8b51e5eaee42e7b4db83ca00afc92e/",
+          thumb: "https://img.gamedistribution.com/0a8b51e5eaee42e7b4db83ca00afc92e-512x384.jpg"
+       },
+       {
+          title: "Daily Solitaire",
+          cat: "Casual",
+          url: "https://html5.gamedistribution.com/5e6d0ffd732a496bb5f0dc2a15e88778/",
+          thumb: "https://img.gamedistribution.com/5e6d0ffd732a496bb5f0dc2a15e88778-1280x550.jpeg"
+       },
+      {
+           title: "Airport Security",
+           cat: "Casual",
+           url: "https://html5.gamedistribution.com/aff91273917349db8ae9a921954aae5c/",
+           thumb: "https://img.gamedistribution.com/aff91273917349db8ae9a921954aae5c-1280x720.jpg"
+      }
+    ];
+
+    // --- 4. RENDER LOGIC WITH PAGINATION ---
+    
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let currentFilteredGames = [];
+
+    function render() {
+        const grid = document.getElementById('game-grid');
+        if(!grid) return;
+        
+        // Calculate pagination slice
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const gamesToShow = currentFilteredGames.slice(startIndex, endIndex);
+
+        grid.innerHTML = '';
+        gamesToShow.forEach(g => grid.appendChild(createCard(g)));
+        
+        renderPagination();
+        observeElements();
+    }
+    
+    function renderPagination() {
+        const container = document.getElementById('pagination-controls');
+        const totalPages = Math.ceil(currentFilteredGames.length / itemsPerPage);
+        
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        let html = ``;
+        
+        // Previous Button
+        if (currentPage > 1) {
+            html += `<div class="page-btn" onclick="changePage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></div>`;
+        } else {
+             html += `<div class="page-btn disabled"><i class="fas fa-chevron-left"></i></div>`;
+        }
+
+        // Page Numbers
+        for(let i = 1; i <= totalPages; i++) {
+             html += `<div class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</div>`;
+        }
+        
+        // Next Button
+        if (currentPage < totalPages) {
+            html += `<div class="page-btn" onclick="changePage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></div>`;
+        } else {
+            html += `<div class="page-btn disabled"><i class="fas fa-chevron-right"></i></div>`;
+        }
+        
+        container.innerHTML = html;
+    }
+    
+    window.changePage = function(page) {
+        currentPage = page;
+        render();
+        // Smooth scroll back to top of grid
+        document.querySelector('.controls').scrollIntoView({behavior: 'smooth'});
+    };
+
+    function createCard(g) {
+        const div = document.createElement('div');
+        div.className = 'card reveal-on-scroll';
+        div.innerHTML = `
+            <img src="${g.thumb}" class="thumb" loading="lazy" onerror="this.src='https://via.placeholder.com/300x200?text=Signal+Lost'">
+            <div class="card-body">
+                <h3 class="card-title">${g.title}</h3>
+                <span class="card-cat">${g.cat}</span>
+            </div>
+        `;
+        div.onclick = () => openGame(g.url, g.title, g.cat);
+        return div;
+    }
+
+    // --- REFACTORED INTERSECTION OBSERVER (PERSISTENT ANIMATION) ---
+    function observeElements() {
+        if (window.globalObserver) window.globalObserver.disconnect();
+        
+        window.globalObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                // Toggle 'active' based on visibility to re-trigger animations
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                } else {
+                    entry.target.classList.remove('active');
+                }
+            });
+        }, { 
+            threshold: 0.15, // Slightly higher threshold for better effect
+            rootMargin: "0px 0px -50px 0px" // Triggers slightly before element leaves bottom
+        }); 
+        
+        document.querySelectorAll('.reveal-on-scroll').forEach(el => window.globalObserver.observe(el));
+    }
+
+    // --- 5. GLOBAL WINDOW FUNCTIONS (For HTML Event Handlers) ---
+    window.openGame = function(baseUrl, title, cat) {
+        const gv = document.getElementById('game-viewer');
+        const loader = document.getElementById('game-loader-ui');
+        
+        const referrer = encodeURIComponent(window.location.href);
+        let finalUrl = baseUrl;
+        
+        if(baseUrl.includes('via.placeholder') || baseUrl.includes('placeholder')) {
+             finalUrl = 'about:blank';
+             alert("Simulation data corrupted (Placeholder). Launching empty frame.");
+        } else {
+             // GD SDK Compliance
+             finalUrl = `${baseUrl}?gd_sdk_referrer_url=${referrer}`;
+        }
+        
+        gv.style.display = 'block'; 
+        // Slight delay for transition
+        setTimeout(() => gv.classList.add('active'), 10);
+        
+        loader.style.display = 'flex';
+        
+        const iframe = document.getElementById('game-frame');
+        iframe.src = finalUrl;
+        
+        iframe.onload = () => { loader.style.display = 'none'; };
+
+        document.getElementById('gv-title').innerText = title;
+        document.getElementById('gv-cat').innerText = cat;
+    };
+
+    window.closeGame = function() {
+        const gv = document.getElementById('game-viewer'); 
+        gv.classList.remove('active');
+        setTimeout(() => { 
+            gv.style.display = 'none'; 
+            document.getElementById('game-frame').src = "about:blank"; 
+        }, 400);
+    };
+    
+    window.toggleFull = function() {
+        const el = document.getElementById('gf-wrapper');
+        !document.fullscreenElement ? el.requestFullscreen().catch(e=>{}) : document.exitFullscreen();
+    };
+    window.goHome = function() { window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    
+    window.openProtocols = function() {
+        document.getElementById('protocols-modal').classList.add('active');
+    };
+
+    function showToast(iconClass, title, message) {
+        const container = document.getElementById('nexus-toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'nexus-toast';
+        toast.innerHTML = `<i class="${iconClass} nt-icon"></i><div class="nt-content"><h4>${title}</h4><p>${message}</p></div>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('active'), 50);
+        setTimeout(() => { toast.classList.remove('active'); setTimeout(() => toast.remove(), 500); }, 4000);
+    }
+    
+    window.closeModal = function(id) { document.getElementById(id).classList.remove('active'); };
+
+    // --- 6. AUTH & USER LOGIC ---
+    window.openLoginModal = function() { document.getElementById('login-modal').classList.add('active'); };
+    
+    window.loginGoogle = function() {
+        const provider = new GoogleAuthProvider();
+        signInWithPopup(auth, provider)
+            .then(() => window.closeModal('login-modal'))
+            .catch(err => alert("Login Error: " + err.message));
+    };
+    
+    window.logout = function() {
+        if (globalMsgListener) globalMsgListener();
+        friendStatusUnsubs.forEach(unsub => unsub());
+        signOut(auth).then(() => window.location.reload());
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        const container = document.getElementById('auth-container');
+        if (user) {
+            startHeartbeat();
+            initGlobalMessageListener();
+
+            onSnapshot(doc(db, 'users', user.uid), snapshot => {
+                if (snapshot.exists()) {
+                    userData = snapshot.data();
+                    if (!userData.username) document.getElementById('username-modal').classList.add('active');
+                    else {
+                        if (!userData.commanderId) ensureCommanderId();
+                        updateUIWithProfile();
+                    }
+                    loadSocialData();
+                } else {
+                    // New user doc creation
+                    document.getElementById('username-modal').classList.add('active');
+                }
+            });
+        } else {
+            container.innerHTML = `<button class="auth-btn" onclick="openLoginModal()"><i class="fas fa-key"></i> ACCESS</button>`;
+            document.getElementById('social-fab').style.display = 'none';
+        }
+    });
+
+    function updateUIWithProfile() {
+        if (!currentUser) return;
+        const container = document.getElementById('auth-container');
+        const displayName = (userData && userData.username) ? userData.username : "Recruit";
+        const photo = currentUser.photoURL || "https://via.placeholder.com/32";
+        container.innerHTML = `<button class="auth-btn" style="border-color:var(--cyan);" onclick="openProfileModal()"><img src="${photo}" class="user-avatar"><span>${displayName}</span></button>`;
+        document.getElementById('social-fab').style.display = 'flex';
+    }
+
+    // --- 7. GLOBAL MONITOR ---
+    function initGlobalMessageListener() {
+        if (!currentUser) return;
+        if (globalMsgListener) globalMsgListener();
+        
+        const q = query(
+            collectionGroup(db, 'messages'), 
+            where('receiverId', '==', currentUser.uid), 
+            where('read', '==', false)
+        );
+
+        globalMsgListener = onSnapshot(q, (snap) => {
+            const count = snap.size;
+            const badge = document.getElementById('global-badge');
+            
+            badge.innerText = count >= 100 ? "99+" : count;
+            badge.style.display = count > 0 ? 'flex' : 'none';
+            
+            if(count > 0 && !document.getElementById('social-panel').classList.contains('active')) {
+                 const fab = document.getElementById('social-fab');
+                 fab.style.boxShadow = "0 0 30px var(--danger)";
+                 setTimeout(() => fab.style.boxShadow = "", 2000);
+            }
+        }, err => {
+            console.error("Monitor Error:", err);
+        });
+    }
+
+    // --- 8. PROFILE & GAMIFICATION (POLICE DOSSIER UPDATE) ---
+    window.openProfileModal = function() {
+        if (!currentUser) return;
+        const safeUsername = userData?.username || "Loading...";
+        const displayId = userData?.commanderId || "Syncing...";
+        const photo = currentUser.photoURL;
+        const xpData = calculateXP(userData.joined);
+        const joinDate = userData.joined ? new Date(userData.joined.seconds * 1000).toLocaleDateString() : "Unknown";
+
+        const content = document.getElementById('profile-content');
+        
+        // UPGRADE: "Realistic" Police/Military Dossier Layout
+        content.innerHTML = `
+            <div class="dossier-container">
+                <div class="dossier-left">
+                    <div class="dossier-photo-frame">
+                        <div class="dossier-scan-line"></div>
+                        <img src="${photo}">
+                    </div>
+                    <div class="id-badge" onclick="copyCode('${displayId}')" title="Click to Copy" style="margin-top:0; border:none; background:transparent;">
+                        <span style="display:block; font-size:0.6rem; color:var(--cyan); letter-spacing:2px; margin-bottom:5px;">COMMANDER ID</span>
+                        <span style="font-family:var(--font-mono); color:white; font-size:1.1rem; border:1px dashed #444; padding:5px 10px; display:inline-block;">${displayId}</span>
+                    </div>
+                </div>
+                
+                <div class="dossier-right">
+                    <div class="dossier-header">
+                        <div>
+                            <span class="dh-title">PERSONNEL FILE // CLASSIFIED</span>
+                            <h2 class="dh-name">${safeUsername}</h2>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="dh-title">CLEARANCE</span>
+                            <div style="font-size:1.4rem; color:var(--cyan); font-weight:bold;">LEVEL ${xpData.level}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-grid">
+                        <div class="data-cell">
+                            <span class="data-label">STATUS</span>
+                            <span class="data-value" style="color:var(--success);">ACTIVE DUTY</span>
+                        </div>
+                        <div class="data-cell">
+                            <span class="data-label">DATE ENLISTED</span>
+                            <span class="data-value">${joinDate}</span>
+                        </div>
+                        <div class="data-cell">
+                            <span class="data-label">ALLIES LINKED</span>
+                            <span class="data-value">${userData.friends ? userData.friends.length : 0} UNITS</span>
+                        </div>
+                        <div class="data-cell">
+                            <span class="data-label">BLACKLISTED</span>
+                            <span class="data-value" style="color:var(--danger);">${userData.blocked ? userData.blocked.length : 0} TARGETS</span>
+                        </div>
+                    </div>
+                    
+                    <div class="xp-section">
+                        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#888; font-family:var(--font-mono);">
+                            <span>PROGRESS TO NEXT CLEARANCE</span>
+                            <span>${Math.round(xpData.percent)}%</span>
+                        </div>
+                        <div class="xp-hud-bar">
+                            <div class="xp-hud-fill" style="width:${xpData.percent}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="badge-rack">
+                        <div class="rack-slot earned" title="Early Adopter"><i class="fas fa-satellite"></i></div>
+                        <div class="rack-slot ${xpData.level > 1 ? 'earned' : ''}" title="Veteran"><i class="fas fa-meteor"></i></div>
+                        <div class="rack-slot ${userData.friends && userData.friends.length > 0 ? 'earned' : ''}" title="Socialite"><i class="fas fa-link"></i></div>
+                        <div class="rack-slot" title="Master"><i class="fas fa-crown"></i></div>
+                    </div>
+
+                    <div class="dossier-actions">
+                        <button onclick="logout()" style="background:transparent; color:var(--danger); border:1px solid var(--danger); padding:10px 20px; font-family:var(--font-mono); cursor:pointer; font-size:0.8rem; letter-spacing:1px; width:100%; transition:0.2s;">
+                            <i class="fas fa-power-off"></i> TERMINATE UPLINK (LOGOUT)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('profile-modal').classList.add('active');
+    };
+
+    function calculateXP(joinedTimestamp) {
+        if (!joinedTimestamp) return { current:0, next:500, level:1, percent:0 };
+        const joined = joinedTimestamp.seconds ? joinedTimestamp.seconds * 1000 : Date.now();
+        const days = Math.max(1, Math.floor((Date.now() - joined) / (1000 * 60 * 60 * 24)));
+        const totalXP = (days * 50) + 100;
+        const level = Math.floor(totalXP / 500) + 1;
+        const nextLevelXP = level * 500;
+        const currentLevelXP = (level - 1) * 500;
+        const percent = ((totalXP - currentLevelXP) / 500) * 100;
+        return { current: totalXP, next: nextLevelXP, level, percent };
+    }
+
+    function generateCommanderId() { return `${Math.floor(10000000 + Math.random() * 90000000)}${Math.floor(10000000 + Math.random() * 90000000)}`; }
+
+    async function ensureCommanderId() {
+        if (!userData || userData.commanderId) return;
+        const newId = generateCommanderId();
+        const batch = writeBatch(db);
+        batch.set(doc(db, "friend_codes", newId), { uid: currentUser.uid, username: userData.username || "Unknown" });
+        batch.update(doc(db, "users", currentUser.uid), { commanderId: newId });
+        await batch.commit();
+    }
+    
+    window.copyCode = function(code) { 
+        navigator.clipboard.writeText(code); 
+        showToast("fas fa-copy", "System", "ID copied to clipboard."); 
+    };
+
+    window.submitUsername = async function() {
+        const input = document.getElementById('new-username');
+        const errorMsg = document.getElementById('username-error');
+        const btn = document.getElementById('submit-btn');
+        const username = input.value.trim();
+        
+        if (!/^[a-zA-Z0-9]{3,10}$/.test(username)) { 
+            errorMsg.innerText = "Error: Alphanumeric, 3-10 chars only."; errorMsg.style.display = 'block'; return; 
+        }
+        
+        btn.disabled = true; btn.innerText = "PROCESSING...";
+        try {
+            const check = await getDoc(doc(db, 'usernames', username));
+            if (check.exists() && check.data().uid !== currentUser.uid) { 
+                errorMsg.innerText = "Alias taken."; errorMsg.style.display = 'block'; btn.disabled = false; return; 
+            }
+            const batch = writeBatch(db);
+            const cId = userData?.commanderId || generateCommanderId();
+            
+            if (!userData?.commanderId) batch.set(doc(db, 'friend_codes', cId), { uid: currentUser.uid, username: username });
+            batch.set(doc(db, 'usernames', username), { uid: currentUser.uid });
+            batch.set(doc(db, 'users', currentUser.uid), {
+                username: username, commanderId: cId, uid: currentUser.uid,
+                photoURL: currentUser.photoURL, email: currentUser.email,
+                joined: userData?.joined || serverTimestamp(),
+                friends: userData?.friends || [], blocked: userData?.blocked || []
+            }, { merge: true });
+            
+            await batch.commit(); window.location.reload();
+        } catch (e) { errorMsg.innerText = "Error: " + e.message; btn.disabled = false; }
+    };
+
+    // --- 9. SOCIAL LOGIC ---
+    function loadSocialData() {
+        if (!currentUser) return;
+        const q = query(collection(db, 'friend_requests'), where('toUid', '==', currentUser.uid));
+        
+        onSnapshot(q, snap => {
+            const list = document.getElementById('requests-list');
+            let html = '';
+            snap.forEach(docSnap => { 
+                const d = docSnap.data();
+                html += `<div class="req-item"><div style="flex:1;"><div style="color:white; font-size:0.9rem; font-family:var(--font-mono);">${d.fromName}</div></div><button onclick="acceptRequest('${docSnap.id}', '${d.fromUid}', '${d.fromName}')" style="background:var(--success); border:none; color:black; border-radius:4px; padding:4px 10px; cursor:pointer; font-weight:bold;">ACCEPT</button></div>`;
+            });
+            list.innerHTML = html || '<div style="text-align:center; color:#666; padding:10px;">No pending signals.</div>';
+        });
+        if(userData) { renderFriends(userData.friends || []); renderBlocked(userData.blocked || []); }
+    }
+
+    function loadLeaderboard() {
+        const div = document.getElementById('leaderboard-list');
+        const q = query(collection(db, 'users'), orderBy('joined', 'asc'), limit(10));
+        
+        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(module => {
+            module.getDocs(q).then(snap => {
+                let html = '';
+                let rank = 1;
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    html += `
+                    <div class="leaderboard-row">
+                        <div class="rank-num">#${rank++}</div>
+                        <div style="flex:1;">${d.username || 'Unknown'}</div>
+                        <div style="color:var(--cyan); font-size:0.75rem; font-family:var(--font-mono);">LVL ${calculateXP(d.joined).level}</div>
+                    </div>`;
+                });
+                div.innerHTML = html;
+            });
+        });
+    }
+
+    function renderFriends(arr) {
+        const list = document.getElementById('friends-list');
+        friendStatusUnsubs.forEach(u => u()); friendStatusUnsubs = [];
+        if (!arr.length) { list.innerHTML = '<div style="text-align:center; color:#666; margin-top:20px; font-size:0.8rem;">No allies connected.</div>'; return; }
+        
+        list.innerHTML = ''; 
+        const unique = [...new Map(arr.map(item => [item.uid, item])).values()];
+        
+        unique.forEach(f => {
+            const div = document.createElement('div'); div.className = 'friend-item';
+            div.innerHTML = `<img src="https://ui-avatars.com/api/?name=${f.username}&background=00f2ff&color=000" class="f-avatar"><div style="flex:1;"><div style="color:white; font-size:0.9rem; font-family:var(--font-mono);">${f.username}</div><div style="color:#666; font-size:0.7rem;" id="status-${f.uid}">Offline</div></div><i class="far fa-comment-alt" style="color:var(--cyan)"></i>`;
+            div.onclick = () => window.openChat(f.uid, f.username);
+            list.appendChild(div);
+            
+            friendStatusUnsubs.push(onSnapshot(doc(db, 'users', f.uid), d => {
+                if(d.exists()) {
+                    const data = d.data();
+                    const lastSeen = data.lastSeen ? (data.lastSeen.seconds * 1000) : 0;
+                    const isOnline = (Date.now() - lastSeen) < 60000;
+                    const el = document.getElementById(`status-${f.uid}`);
+                    if(el) el.innerHTML = isOnline ? `<span class="status-dot online"></span> Active` : `<span class="status-dot offline"></span> Offline`;
+                }
+            }));
+        });
+    }
+
+    function renderBlocked(arr) {
+        const list = document.getElementById('blocked-list');
+        list.innerHTML = arr.length ? '' : '<div style="text-align:center; color:#666; margin-top:20px; font-size:0.8rem;">No blocked entities.</div>';
+        arr.forEach(b => {
+             list.innerHTML += `<div class="friend-item" style="cursor:default;"><div style="flex:1; color:#888;">${b.username}</div><button onclick="openUnblockModal('${b.uid}')" style="background:none; border:1px solid var(--cyan); color:var(--cyan); border-radius:4px; font-size:0.7rem; cursor:pointer;">RESTORE</button></div>`;
+        });
+    }
+
+    function startHeartbeat() {
+        const beat = () => { if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { lastSeen: serverTimestamp() }).catch(()=>{}); };
+        beat(); setInterval(beat, 45000); 
+    }
+
+    window.sendInvite = async function() {
+        const input = document.getElementById('invite-input-tab');
+        const msg = document.getElementById('invite-msg-tab');
+        const code = input.value.trim();
+        if (code.length < 5) return;
+        
+        try {
+            const codeDoc = await getDoc(doc(db, 'friend_codes', code));
+            if (!codeDoc.exists()) { msg.innerText = "Target invalid."; msg.style.color = 'var(--danger)'; return; }
+            const targetUid = codeDoc.data().uid;
+            if (targetUid === currentUser.uid || userData.friends.some(f=>f.uid===targetUid)) { msg.innerText = "Already linked."; msg.style.color = '#fff'; return; }
+            await addDoc(collection(db, 'friend_requests'), { fromUid: currentUser.uid, fromName: userData.username, toUid: targetUid, timestamp: serverTimestamp() });
+            msg.innerText = "Signal sent."; msg.style.color = 'var(--success)'; input.value = '';
+        } catch (e) { msg.innerText = "Error."; }
+    };
+
+    window.acceptRequest = async function(reqId, fromUid, fromName) {
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'users', currentUser.uid), { friends: arrayUnion({ uid: fromUid, username: fromName }) });
+        batch.update(doc(db, 'users', fromUid), { friends: arrayUnion({ uid: currentUser.uid, username: userData.username }) });
+        batch.delete(doc(db, 'friend_requests', reqId));
+        await batch.commit();
+    };
+
+    // --- 10. CHAT SYSTEM ---
+    window.openChat = function(friendUid, friendName) {
+        currentChatUserUid = friendUid;
+        document.getElementById('chat-friend-name').innerText = friendName;
+        document.getElementById('chat-interface').classList.add('open');
+        
+        activeChatId = [currentUser.uid, friendUid].sort().join('_');
+        
+        const msgContainer = document.getElementById('chat-msgs');
+        if(chatUnsub) chatUnsub();
+        
+        const q = query(
+            collection(db, 'chats', activeChatId, 'messages'), 
+            orderBy('timestamp', 'asc'), 
+            limit(50)
+        );
+
+        chatUnsub = onSnapshot(q, (snapshot) => {
+            msgContainer.innerHTML = '';
+            
+            const batch = writeBatch(db);
+            let hasUpdates = false;
+
+            snapshot.docs.forEach(docSnap => {
+                const d = docSnap.data();
+                const div = document.createElement('div');
+                div.className = `msg ${d.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
+                div.innerText = d.text;
+                msgContainer.appendChild(div);
+                
+                if(d.receiverId === currentUser.uid && d.read === false) {
+                    batch.update(docSnap.ref, { read: true });
+                    hasUpdates = true;
+                }
+            });
+            
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+            if(hasUpdates) batch.commit().catch(e => console.log("Batch Update Error", e));
+
+        }, error => {
+            console.error("Chat Error:", error);
+        });
+    };
+
+    window.closeChat = function() { document.getElementById('chat-interface').classList.remove('open'); if (chatUnsub) chatUnsub(); };
+    
+    window.sendMessage = async function() {
+        const input = document.getElementById('chat-input');
+        const txt = input.value.trim();
+        if (!txt || !activeChatId || !currentChatUserUid) return;
+        
+        await addDoc(collection(db, 'chats', activeChatId, 'messages'), { 
+            text: txt, 
+            senderId: currentUser.uid, 
+            receiverId: currentChatUserUid, 
+            read: false,                   
+            timestamp: serverTimestamp() 
+        });
+        input.value = '';
+    };
+    
+    window.handleChatKey = function(e) { if (e.key === 'Enter') window.sendMessage(); };
+
+    // --- 11. NAVIGATION & UTILS ---
+    window.toggleSocialPanel = function() { 
+        if (!currentUser) { alert("Login required."); return; } 
+        document.getElementById('social-panel').classList.toggle('active'); 
+    };
+    
+    window.switchTab = function(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.social-view').forEach(v => v.classList.remove('active'));
+        
+        const idx = tab==='friends'?0 : tab==='ranking'?1 : tab==='comms'?2 : 3;
+        document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+        document.getElementById(`view-${tab}`).classList.add('active');
+        
+        if(tab === 'ranking') loadLeaderboard();
+    };
+    
+    window.filterCat = function(cat) {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        // Update data source, reset page, then render
+        currentFilteredGames = (cat === 'All' ? gameData : gameData.filter(g => g.cat === cat));
+        currentPage = 1;
+        render();
+    };
+    
+    window.filterGames = function() {
+        const q = document.getElementById('search-input').value.toLowerCase();
+        // Update data source based on search
+        currentFilteredGames = gameData.filter(g => g.title.toLowerCase().includes(q));
+        currentPage = 1;
+        render();
+    };
+    
+    window.openBlockModal = function() { document.getElementById('block-confirm-modal').classList.add('active'); };
+    window.openUnblockModal = function(uid) { targetUnblockUid = uid; document.getElementById('unblock-confirm-modal').classList.add('active'); };
+    
+    window.confirmBlockUser = async function() {
+        const friendName = document.getElementById('chat-friend-name').innerText;
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'users', currentUser.uid), { 
+            friends: arrayRemove({ uid: currentChatUserUid, username: friendName }), 
+            blocked: arrayUnion({ uid: currentChatUserUid, username: friendName }) 
+        });
+        await batch.commit();
+        window.closeModal('block-confirm-modal'); 
+        window.closeChat();
+    };
+    
+    window.confirmUnblockUser = function() { 
+        if(!targetUnblockUid) return; 
+        const blockedObj = userData.blocked.find(b => b.uid === targetUnblockUid);
+        if(blockedObj) updateDoc(doc(db, 'users', currentUser.uid), { blocked: arrayRemove(blockedObj) });
+        window.closeModal('unblock-confirm-modal');
+    };
+</script>
+</body>
+</html>
