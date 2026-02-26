@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us | Scientific Nexus</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --cyan: #00f2ff; 
+            --cyan-glow: rgba(0, 242, 255, 0.4);
+            --cyan-dim: rgba(0, 242, 255, 0.1);
+            --dark: #050507; 
+            --glass-bg: rgba(15, 15, 20, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --font-main: 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+        }
+        body { 
+            background-color: var(--dark); 
+            color: #e0e0e0; 
+            font-family: var(--font-main); 
+            margin: 0; 
+            padding: 0; 
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+        nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 15px 5%; 
+            background: rgba(5, 5, 7, 0.95); 
+            border-bottom: 1px solid var(--glass-border); 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000; 
+        }
+        .logo { 
+            font-family: var(--font-mono); 
+            color: var(--cyan); 
+            font-size: 1.4rem; 
+            text-transform: uppercase; 
+            text-decoration: none; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
+        .back-btn { 
+            background: transparent; 
+            border: 1px solid var(--cyan); 
+            color: var(--cyan); 
+            padding: 8px 15px; 
+            text-decoration: none; 
+            font-family: var(--font-mono); 
+            transition: 0.3s; 
+        }
+        .back-btn:hover { 
+            background: var(--cyan-dim); 
+            box-shadow: 0 0 15px var(--cyan-dim); 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 40px auto; 
+            padding: 0 20px;
+        }
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        h1 { 
+            color: #fff; 
+            font-family: var(--font-mono); 
+            text-transform: uppercase; 
+            font-size: 2.5rem; 
+            letter-spacing: 2px; 
+            text-shadow: 0 0 15px var(--cyan-dim); 
+            border-bottom: 2px solid var(--cyan); 
+            padding-bottom: 15px; 
+            margin-bottom: 30px;
+        }
+        h2 { 
+            color: var(--cyan); 
+            font-family: var(--font-mono); 
+            text-transform: uppercase; 
+            font-size: 1.8rem; 
+            margin-top: 20px; 
+        }
+        p { 
+            font-size: 1.15rem; 
+            color: #ccc; 
+            margin-bottom: 20px; 
+            text-align: justify; 
+        }
+        
+        /* Reveal Animation Classes */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.5rem; }
+            .glass-panel { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="index.html" class="logo"><i class="fas fa-atom"></i> SCIENTIFIC NEXUS</a>
+    <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> INITIALIZE TERMINAL</a>
+</nav>
+
+<div class="container">
+    <div class="glass-panel reveal">
+        <h1>Entity Designation: Scientific Nexus</h1>
+        <p>Welcome to the core architecture of Scientific Nexus. We are not merely a repository of information; we are an interactive, highly scalable computational proving ground. Based in the heart of Pakistan's rapidly expanding technological sector, Scientific Nexus operates at the intersection of rigorous academic theory and cutting-edge web infrastructure. Our platform represents a paradigm shift in how students, researchers, and engineers interact with the physical laws that govern our universe.</p>
+        <p>Historically, high-fidelity computational physics, kinetic simulations, and cognitive testing required specialized desktop software, massive local computational overhead, and steep learning curves. Scientific Nexus was founded to dismantle these barriers. By leveraging the untethered power of modern web browsers, we are transforming any standard machine into a formidable node capable of executing complex thermodynamic, structural, and quantum models in real-time. We bring the laboratory to the terminal.</p>
+    </div>
+
+    <div class="glass-panel reveal">
+        <h2>Our Mission: Democratizing Complex Systems</h2>
+        <p>The primary directive of Scientific Nexus is simple yet ambitious: to make the universe's most complex scientific phenomena inherently accessible, interactable, and comprehensible through browser-based modules. We believe that true understanding stems from interaction, not passive observation. When a user can alter the gravitational constant of an n-body orbital simulation in real-time or visualize the immediate cascade failures of a soft-body structural collapse, theoretical physics transcends the textbook.</p>
+        <p>Our commitment extends beyond rendering physics; we aim to challenge and map human cognitive load limits. By utilizing interactive simulations, we gather vital data on how the human mind tracks parabolic trajectories, adapts to shifting kinetic variables, and processes dense streams of visual telemetry. Scientific Nexus is designed to be a dual-purpose engine: it simulates reality while simultaneously testing the user's strategic capacity to interpret it. From high school students exploring basic kinematics to advanced undergraduates running finite element analyses, our modules scale to meet the intellectual demands of the user.</p>
+    </div>
+
+    <div class="glass-panel reveal">
+        <h2>Our Team: The Architects of the Nexus</h2>
+        <p>Scientific Nexus is driven by a specialized cadre of software engineers, physics enthusiasts, and UI/UX architects localized in Pakistan, unified by a shared obsession with computational efficiency. Our development methodology is deeply rooted in iterative optimization. The team operates under the belief that a dropped frame is a failure of logic, not hardware. </p>
+        <p>We combine diverse expertise ranging from numerical analysis and low-level graphics programming to behavioral psychology and network architecture. Every line of code committed to the Nexus repository is heavily scrutinized to ensure it performs seamlessly across disparate devices. We do not just write JavaScript; we orchestrate memory allocation, manage garbage collection cycles, and write custom shaders to ensure that every simulation runs flawlessly at 60 Frames Per Second. We are a collective dedicated to bridging the gap between theoretical mathematics and tangible digital experiences.</p>
+    </div>
+
+    <div class="glass-panel reveal">
+        <h2>The Technology Stack: Silicon and Syntax</h2>
+        <p>To synthesize reality out of floating-point mathematics, Scientific Nexus relies on a highly aggressive, optimized technology stack. The foundation of our front-end relies on raw, unadulterated HTML5 and modern CSS3, utilizing CSS variables, CSS Grid, and Flexbox to create our signature 'Cybernetic Terminal' aesthetic—an interface designed for low eye strain and high data density. We employ glassmorphism techniques to provide depth without sacrificing performance.</p>
+        <p>The true engine of the Nexus, however, lies in its logic layer. We utilize advanced JavaScript (ES6+), WebAssembly (Wasm), and WebGL to bypass the traditional limitations of single-threaded browser execution. By offloading complex parallel computations—such as spatial hashing for broad-phase collision detection or Barnes-Hut quadtree traversals for gravitational mapping—directly to the user's Graphics Processing Unit (GPU), we achieve simulation scales that were previously impossible on the web. We also integrate MathJax for the dynamic, pristine rendering of complex LaTeX formulas, ensuring that the theoretical math is as visually striking as the simulations they power.</p>
+        <p>Scientific Nexus is a living, evolving terminal. As web standards progress with the advent of WebGPU and advanced multithreading capabilities, so too will the fidelity, scale, and complexity of our artificial realities.</p>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15 
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target); // Triggers only once per session
+                }
+            });
+        }, observerOptions);
+
+        const revealElements = document.querySelectorAll('.reveal');
+        revealElements.forEach(el => observer.observe(el));
+    });
+</script>
+
+</body>
+</html>
