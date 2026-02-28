@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Data Manifest | Scientific Nexus</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --cyan: #00f2ff; 
+            --cyan-glow: rgba(0, 242, 255, 0.4);
+            --cyan-dim: rgba(0, 242, 255, 0.1);
+            --dark: #050507; 
+            --panel-bg: rgba(15, 15, 20, 0.92);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --success: #00ff88;
+            --danger: #ff4444;
+            --gold: #ffd700;
+            --font-main: 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            background-color: var(--dark); 
+            color: #e0e0e0; 
+            font-family: var(--font-main); 
+            margin: 0; 
+            padding: 0; 
+            line-height: 1.8; 
+            overflow-x: hidden;
+        }
+
+        /* --- HIGH-END REALISM: CRT & VIGNETTE EFFECTS --- */
+        .crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 99998;
+            pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            opacity: 0.35;
+        }
+        .vignette-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 99997;
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 50%, rgba(0,0,0,0.85) 100%);
+        }
+        @keyframes crt-flicker {
+            0% { opacity: 0.98; }
+            5% { opacity: 0.92; }
+            10% { opacity: 0.98; }
+            100% { opacity: 1; }
+        }
+        body.crt-active {
+            animation: crt-flicker 0.15s infinite;
+        }
+
+        /* --- INTERACTIVE BUTTON FEEDBACK --- */
+        .nav-back:active {
+            transform: scale(0.96) !important;
+            filter: brightness(1.2);
+            box-shadow: 0 0 5px var(--cyan-dim) !important;
+        }
+        
+        /* --- NAVIGATION --- */
+        nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: clamp(10px, 2vh, 15px) 5%; 
+            background: rgba(5, 5, 7, 0.95); 
+            border-bottom: 1px solid var(--glass-border); 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000; 
+            flex-wrap: wrap;
+            gap: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .logo { 
+            font-family: var(--font-mono); 
+            color: var(--cyan); 
+            font-size: clamp(1.1rem, 3vw, 1.4rem); 
+            text-transform: uppercase; 
+            text-decoration: none; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            text-shadow: 0 0 10px var(--cyan-glow);
+        }
+        .nav-back {
+            background: rgba(5, 5, 7, 0.9);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            padding: clamp(6px, 1.5vw, 10px) clamp(10px, 2vw, 20px);
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            text-decoration: none;
+            font-size: clamp(0.75rem, 2vw, 0.9rem);
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-transform: uppercase;
+            min-height: 44px;
+        }
+        .nav-back:hover {
+            background: var(--cyan-dim);
+            box-shadow: 0 0 15px var(--cyan-glow);
+            color: #fff;
+        }
+
+        /* --- TERMINAL CONTAINER --- */
+        .terminal-container { 
+            width: 95%;
+            max-width: 1200px; 
+            margin: clamp(20px, 4vh, 40px) auto; 
+            padding: clamp(20px, 4vw, 40px); 
+            background: var(--panel-bg); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 6px; 
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 { 
+            color: #fff; 
+            font-family: var(--font-mono); 
+            text-transform: uppercase; 
+            font-size: clamp(1.8rem, 5vw, 2.5rem); 
+            letter-spacing: 2px; 
+            text-shadow: 0 0 15px var(--cyan-dim); 
+            border-bottom: 2px solid var(--cyan); 
+            padding-bottom: 15px; 
+            margin-bottom: 30px;
+        }
+        h2 { 
+            color: var(--cyan); 
+            font-family: var(--font-mono); 
+            text-transform: uppercase; 
+            font-size: clamp(1.2rem, 4vw, 1.6rem); 
+            margin-top: 50px; 
+            border-left: 4px solid var(--cyan);
+            padding-left: 15px;
+            background: linear-gradient(90deg, var(--cyan-dim), transparent);
+        }
+        p { color: #ccc; font-size: clamp(1rem, 2.5vw, 1.15rem); margin-bottom: 20px; text-align: justify; }
+
+        /* --- DATA TABLES --- */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            background: rgba(0,0,0,0.3);
+        }
+        .manifest-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
+            text-align: left;
+            min-width: 700px; /* Forces scroll on small screens */
+        }
+        .manifest-table th, .manifest-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .manifest-table th {
+            background: rgba(0, 242, 255, 0.05);
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        .manifest-table tr:hover { background: rgba(255, 255, 255, 0.03); }
+        .manifest-table tr:last-child td { border-bottom: none; }
+        
+        .status-badge {
+            padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid transparent; font-weight: bold; letter-spacing: 1px; display: inline-block;
+        }
+        .status-badge.online { color: var(--success); border-color: var(--success); background: rgba(0, 255, 136, 0.1); }
+        .status-badge.archived { color: #888; border-color: #555; background: rgba(255, 255, 255, 0.05); }
+        .status-badge.warning { color: var(--gold); border-color: var(--gold); background: rgba(255, 215, 0, 0.1); }
+
+        /* --- DATA GRIDS & LISTS --- */
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .data-card {
+            background: rgba(255,255,255,0.02); border-left: 3px solid var(--cyan);
+            padding: 20px; font-family: var(--font-mono); border-radius: 0 4px 4px 0;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .data-card.critical { border-left-color: var(--danger); }
+        .data-card.stable { border-left-color: var(--success); }
+
+        .constants-list {
+            list-style: none; padding: 0; margin: 20px 0;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;
+        }
+        .constants-list li {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 3px solid var(--cyan);
+            padding: 20px;
+            font-family: var(--font-mono);
+            display: flex; flex-direction: column; gap: 8px;
+            border-radius: 0 4px 4px 0;
+        }
+        .const-name { color: var(--cyan); font-weight: bold; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; }
+        .const-val { color: #fff; font-size: 1.2rem; }
+        .const-desc { color: #aaa; font-family: var(--font-main); font-size: 0.9rem; line-height: 1.5; }
+
+        /* --- PROGRESS BARS --- */
+        .thermal-bar-container { width: 100%; height: 12px; background: #111; border: 1px solid #444; border-radius: 2px; overflow: hidden; margin-top: 5px; }
+        .thermal-bar { height: 100%; transition: width 1s ease; }
+        .thermal-safe { background: var(--cyan); box-shadow: 0 0 10px var(--cyan-dim); width: 45%; }
+        .thermal-warn { background: var(--gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); width: 75%; }
+        .thermal-danger { background: var(--danger); box-shadow: 0 0 10px rgba(255, 68, 68, 0.3); width: 92%; }
+
+        /* --- TERMINAL SYSTEM LOGS --- */
+        .system-logs {
+            background: #020203;
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: clamp(0.85rem, 2vw, 1rem);
+            color: #0f0;
+            height: 300px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
+            margin-top: 20px;
+        }
+        .log-line { margin-bottom: 10px; text-shadow: 0 0 2px #0f0; }
+        .log-time { color: #555; margin-right: 12px; }
+        .log-warn { color: var(--gold); text-shadow: 0 0 2px var(--gold); }
+        .log-err { color: var(--danger); text-shadow: 0 0 2px var(--danger); }
+        .log-cyan { color: var(--cyan); text-shadow: 0 0 2px var(--cyan); }
+
+        /* --- ANIMATIONS --- */
+        .reveal-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.25, 1, 0.5, 1), transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: opacity, transform;
+        }
+        .reveal-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="crt-active">
+
+<div class="crt-overlay"></div>
+<div class="vignette-overlay"></div>
+
+<nav>
+    <a href="index.html" class="logo"><i class="fas fa-atom"></i> SCIENTIFIC NEXUS</a>
+    <a href="index.html" class="nav-back"><i class="fas fa-terminal"></i> BACK TO TERMINAL</a>
+</nav>
+
+<div class="terminal-container">
+    <h1 class="reveal-up">Primary Data Manifest</h1>
+    <p class="reveal-up">Welcome to the core telemetry registry. This manifest outlines the computational assets, universal constants, hardware diagnostics, and real-time operational logs governing the Nexus HTML5 simulation environments. Access is restricted to Level 2 Research Operatives and above.</p>
+
+    <h2 class="reveal-up">1. Core Simulation Assets</h2>
+    <div class="table-wrapper reveal-up">
+        <table class="manifest-table">
+            <thead>
+                <tr>
+                    <th>Module ID</th>
+                    <th>Sub-Routine Type</th>
+                    <th>Computational Load</th>
+                    <th>Operational Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>SIM-ACT-092 (Zombie Survival)</td>
+                    <td>Kinetic Action / Reaction</td>
+                    <td>High-Yield Vector</td>
+                    <td><span class="status-badge online">ONLINE</span></td>
+                </tr>
+                <tr>
+                    <td>SIM-PUZ-114 (Wood Screw Puzzle)</td>
+                    <td>Structural Physics / Sequential</td>
+                    <td>Moderate Threading</td>
+                    <td><span class="status-badge online">ONLINE</span></td>
+                </tr>
+                <tr>
+                    <td>SIM-PHY-044 (Neon Dash)</td>
+                    <td>Velocity Mechanics</td>
+                    <td>Heavy (GPU Bound)</td>
+                    <td><span class="status-badge online">ONLINE</span></td>
+                </tr>
+                <tr>
+                    <td>SIM-STR-881 (Gear Wars)</td>
+                    <td>Resource Allocation Logic</td>
+                    <td>Standard Processing</td>
+                    <td><span class="status-badge online">ONLINE</span></td>
+                </tr>
+                <tr>
+                    <td>SIM-LEG-001 (Flash Emulator)</td>
+                    <td>Legacy Cognitive Sync</td>
+                    <td>Low Yield</td>
+                    <td><span class="status-badge archived">ARCHIVED</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="reveal-up">2. Active Scientific Constants</h2>
+    <p class="reveal-up">The following parameters are hardcoded into the Nexus physics engines to maintain baseline continuity across structural testing modules.</p>
+    <ul class="constants-list reveal-up">
+        <li>
+            <span class="const-name">Global Gravity Multiplier (g)</span>
+            <span class="const-val">9.81 m/s²</span>
+            <span class="const-desc">Baseline localized acceleration applied to all rigid bodies unless overridden by zero-G protocols.</span>
+        </li>
+        <li>
+            <span class="const-name">Air Resistance (Drag Coefficient)</span>
+            <span class="const-val">0.04 ρ</span>
+            <span class="const-desc">Simulated fluid friction applicable to projectile kinematics (e.g., Bowmasters, Slingshot Dynamics).</span>
+        </li>
+        <li>
+            <span class="const-name">Terminal Velocity Limit</span>
+            <span class="const-val">55.0 m/s</span>
+            <span class="const-desc">Engine cap to prevent floating-point tunneling anomalies during high-speed collision detection.</span>
+        </li>
+        <li>
+            <span class="const-name">Restitution (Bounce) Base</span>
+            <span class="const-val">0.3 - 0.7 e</span>
+            <span class="const-desc">Variable kinetic energy retention. Modified dynamically based on simulated material properties.</span>
+        </li>
+    </ul>
+
+    <h2 class="reveal-up">3. Neural Uplink Telemetry</h2>
+    <p class="reveal-up">Real-time status of global researcher connections to the Firebase WebSocket architecture. Monitors packet integrity and peer-to-peer latency.</p>
+    <div class="data-grid reveal-up">
+        <div class="data-card stable">
+            <span class="const-name">Global Auth Nodes</span>
+            <span class="const-val">1,452 Active</span>
+            <span class="const-desc">Concurrent researchers authenticated via Secure Cloud Protocols.</span>
+        </div>
+        <div class="data-card stable">
+            <span class="const-name">Packet Loss Ratio</span>
+            <span class="const-val">0.0014%</span>
+            <span class="const-desc">Well within acceptable deviation parameters for WebRTC streams.</span>
+        </div>
+        <div class="data-card warning" style="border-left-color: var(--gold);">
+            <span class="const-name">EU-West Ping</span>
+            <span class="const-val">142ms</span>
+            <span class="const-desc">Minor routing delay detected through Trans-Atlantic fiber trunk.</span>
+        </div>
+    </div>
+
+    <h2 class="reveal-up">4. Core Thermal Diagnostics</h2>
+    <p class="reveal-up">Hardware utilization metrics for the Nexus Central Mainframe hosting computational physics algorithms.</p>
+    <div class="data-grid reveal-up">
+        <div class="data-card">
+            <span class="const-name">Cluster Alpha (Logic)</span>
+            <div style="display:flex; justify-content:space-between; color:#fff; font-size:0.9rem;"><span>Load: 45%</span><span>42°C</span></div>
+            <div class="thermal-bar-container"><div class="thermal-bar thermal-safe"></div></div>
+        </div>
+        <div class="data-card">
+            <span class="const-name">Cluster Beta (Physics)</span>
+            <div style="display:flex; justify-content:space-between; color:#fff; font-size:0.9rem;"><span>Load: 75%</span><span>68°C</span></div>
+            <div class="thermal-bar-container"><div class="thermal-bar thermal-warn"></div></div>
+        </div>
+        <div class="data-card">
+            <span class="const-name">Cluster Gamma (GPU)</span>
+            <div style="display:flex; justify-content:space-between; color:var(--danger); font-size:0.9rem; font-weight:bold;"><span>Load: 92%</span><span>88°C</span></div>
+            <div class="thermal-bar-container"><div class="thermal-bar thermal-danger"></div></div>
+        </div>
+    </div>
+
+    <h2 class="reveal-up">5. Quantum Ledger & Hash States</h2>
+    <p class="reveal-up">Verification of encrypted data blocks across the decentralized research network. Ensures simulation results are untampered.</p>
+    <div class="table-wrapper reveal-up">
+        <table class="manifest-table">
+            <thead>
+                <tr>
+                    <th>Ledger Block</th>
+                    <th>Cryptographic Hash (SHA-256)</th>
+                    <th>Entanglement Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>BLK-0091A</td>
+                    <td style="color:#888;">e3b0c44298fc1c149afbf4c8996fb924...</td>
+                    <td><span class="status-badge online">VERIFIED</span></td>
+                </tr>
+                <tr>
+                    <td>BLK-0091B</td>
+                    <td style="color:#888;">8d969eef6ecad3c29a3a629280e686cf...</td>
+                    <td><span class="status-badge online">VERIFIED</span></td>
+                </tr>
+                <tr>
+                    <td>BLK-0091C</td>
+                    <td style="color:#888;">0a4d55a8d778e5022fab701977c5d840...</td>
+                    <td><span class="status-badge warning">SYNCING...</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="reveal-up">6. Live System Telemetry</h2>
+    <div class="system-logs reveal-up" id="mock-logs">
+        <div class="log-line"><span class="log-time">[00:00:01]</span> INIT CORE SYSTEMS... <span class="log-cyan">OK.</span></div>
+        <div class="log-line"><span class="log-time">[00:00:02]</span> ESTABLISHING FIREBASE UPLINK... SYNCHRONIZED.</div>
+        <div class="log-line"><span class="log-time">[00:00:02]</span> LOADING ASSET MANIFEST (48 MODULES DETECTED)...</div>
+        <div class="log-line"><span class="log-time">[00:00:03]</span> <span class="log-warn">WARN: LATENCY SPIKE DETECTED ON NODE [gameberry-terminal]</span></div>
+        <div class="log-line"><span class="log-time">[00:00:04]</span> REROUTING TRAFFIC THROUGH BACKUP SPATIAL HASHING GRID... <span class="log-cyan">OK.</span></div>
+        <div class="log-line"><span class="log-time">[00:00:05]</span> FIRESTORE AUTHENTICATION POOL CHECK: 1450 ACTIVE RESEARCHERS.</div>
+        <div class="log-line"><span class="log-time">[00:00:08]</span> <span class="log-err">ERR: MODULE 'SIM-LEG-001' FAILED TO LOAD. REASON: DEPRECATED ARCHITECTURE.</span></div>
+        <div class="log-line"><span class="log-time">[00:00:09]</span> COMMENCING QUANTUM LEDGER BLOCK [BLK-0091C] SYNC...</div>
+        <div class="log-line"><span class="log-time">[00:00:10]</span> SYSTEM AWAITING USER INPUT PROTOCOLS...</div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // --- REVEAL UP ANIMATIONS ---
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15 
+        };
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal-up').forEach(el => observer.observe(el));
+
+        // --- MOCK TERMINAL LOG TYPING EFFECT ---
+        const logContainer = document.getElementById('mock-logs');
+        const newLog = document.createElement('div');
+        newLog.className = 'log-line';
+        newLog.innerHTML = `<span class="log-time">[00:00:15]</span> <span class="log-cyan">NEW RESEARCHER SESSION INITIATED. TRACKING COGNITIVE YIELD.</span>`;
+        
+        setTimeout(() => {
+            logContainer.appendChild(newLog);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }, 2000);
+        
+        const thermalLog = document.createElement('div');
+        thermalLog.className = 'log-line';
+        thermalLog.innerHTML = `<span class="log-time">[00:00:18]</span> <span class="log-warn">WARN: CLUSTER GAMMA THERMAL LIMIT APPROACHING. THROTTLING VERLET INTEGRATION CYCLES.</span>`;
+        
+        setTimeout(() => {
+            logContainer.appendChild(thermalLog);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }, 5000);
+    });
+</script>
+
+</body>
+</html>
