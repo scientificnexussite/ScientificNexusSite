@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#050507">
+    
+    <title>Syrpts (SilverCash) Terminal | Scientific Nexus</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        :root { 
+            --cyan: #00f2ff; 
+            --cyan-glow: rgba(0, 242, 255, 0.4);
+            --cyan-dim: rgba(0, 242, 255, 0.1);
+            --purple: #bc13fe; 
+            --dark: #050507; 
+            --panel-bg: rgba(15, 15, 20, 0.92);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --header-h: clamp(60px, 8vh, 70px);
+            --danger: #ff4444;
+            --success: #00ff88;
+            --gold: #ffd700;
+            
+            --font-main: 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', monospace;
+        }
+        
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            width: 100%; max-width: 100vw; height: 100%; min-height: 100vh;
+            margin: 0; padding: 0; overflow-x: hidden; 
+            background-color: var(--dark); color: #e0e0e0; 
+            font-family: var(--font-main); 
+        }
+
+        .vignette-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 99997; pointer-events: none;
+            background: radial-gradient(circle at center, transparent 50%, rgba(0,0,0,0.85) 100%);
+        }
+        
+        @keyframes crt-flicker {
+            0% { opacity: 0.98; } 5% { opacity: 0.92; } 10% { opacity: 0.98; } 100% { opacity: 1; }
+        }
+        body.crt-active { animation: crt-flicker 0.15s infinite; }
+
+        #fixed-bg {
+            position: fixed; top: -20vh; left: -10vw; width: 120vw; height: 140vh;
+            background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, transparent 70%);
+            z-index: -10; will-change: transform; transform: translate3d(0, 0, 0); 
+        }
+
+        header { position: fixed; width: 100%; top: 0; left: 0; z-index: 1000; }
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: max(10px, env(safe-area-inset-top)) max(5%, env(safe-area-inset-right)) 10px max(5%, env(safe-area-inset-left)); 
+            background: rgba(5, 5, 7, 0.95); backdrop-filter: blur(15px); border-bottom: 1px solid var(--glass-border);
+            min-height: var(--header-h); flex-wrap: wrap; gap: 15px; box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        }
+        .nav-left-group { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; }
+        .logo { 
+            font-family: var(--font-mono); font-weight: 700; color: var(--cyan); 
+            letter-spacing: 2px; font-size: clamp(0.9rem, 2.5vw, 1.4rem);
+            text-transform: uppercase; display: flex; align-items: center; gap: 8px; cursor: pointer;
+            text-shadow: 0 0 15px var(--cyan-glow); min-width: fit-content;
+        }
+
+        .balance-hud {
+            display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); 
+            background: rgba(0, 242, 255, 0.05); border: 1px solid var(--cyan-dim); 
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.3s;
+        }
+        .balance-hud:hover { border-color: var(--cyan); box-shadow: 0 0 15px var(--cyan-dim); transform: scale(0.98); }
+        .balance-label { color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;}
+        .balance-value { color: var(--cyan); font-weight: bold; font-size: 1rem; text-shadow: 0 0 10px var(--cyan-glow); }
+
+        .system-switcher { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: clamp(0.8rem, 1.5vw, 1rem); }
+        .system-switcher a { color: #666; text-decoration: none; transition: 0.3s; letter-spacing: 1px; }
+        .system-switcher a:hover { color: var(--cyan); text-shadow: 0 0 10px var(--cyan-glow); }
+        .system-switcher .active { color: var(--cyan); font-weight: bold; text-shadow: 0 0 10px var(--cyan-glow); letter-spacing: 1px; }
+        .system-switcher .divider { color: #444; }
+
+        main#app-content { 
+            padding-top: calc(var(--header-h) + 40px);
+            padding-bottom: 40px; width: 95%; max-width: 1600px; margin: 0 auto;
+            min-height: 100vh; display: flex; flex-direction: column;
+        }
+
+        .hero-title { text-align: center; margin-bottom: 40px; }
+        .hero-title h1 {
+            font-family: var(--font-mono); font-size: clamp(2rem, 5vw, 4rem); 
+            margin: 0 0 10px; color: white; text-transform: uppercase; letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+        .hero-title p { 
+            color: var(--gold); font-size: clamp(0.9rem, 2vw, 1.2rem); 
+            letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-mono); margin: 0;
+        }
+
+        .dashboard-grid {
+            display: grid; grid-template-columns: 2fr 1fr; gap: clamp(20px, 2vw, 30px); align-items: start;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg); border: 1px solid var(--glass-border); 
+            border-radius: 8px; padding: clamp(15px, 3vw, 30px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5); position: relative; overflow: hidden;
+            margin-bottom: 25px;
+        }
+        .panel-title {
+            font-family: var(--font-mono); color: var(--cyan); text-transform: uppercase; 
+            letter-spacing: 2px; margin-top: 0; font-size: clamp(1.1rem, 2vw, 1.3rem);
+            border-bottom: 1px solid var(--cyan-dim); padding-bottom: 10px; margin-bottom: 20px;
+        }
+
+        .market-header {
+            display: flex; justify-content: space-between; align-items: flex-end; 
+            border-bottom: 1px solid var(--cyan-dim); padding-bottom: 20px; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;
+        }
+        .asset-name { font-family: var(--font-mono); color: white; font-size: clamp(1.5rem, 3vw, 2.2rem); margin: 0; letter-spacing: 2px; display: flex; align-items: center; gap: 10px; }
+        
+        .market-stats { display: flex; gap: clamp(15px, 3vw, 30px); flex-wrap: wrap; }
+        .stat-box { display: flex; flex-direction: column; }
+        .stat-label { color: #888; font-family: var(--font-mono); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .stat-value { color: white; font-family: var(--font-mono); font-size: clamp(1.2rem, 2.5vw, 1.8rem); font-weight: bold; transition: all 0.3s ease; }
+        .stat-value.price { color: var(--success); text-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+
+        .chart-container {
+            width: 100%; height: clamp(250px, 40vh, 500px); background: #08090d; 
+            border: 1px solid #222; border-radius: 4px; position: relative; overflow: hidden;
+        }
+        canvas#price-chart { width: 100%; height: 100%; display: block; }
+
+        .order-toggle { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px; border: 1px solid #333; }
+        .toggle-btn { 
+            flex: 1; padding: 10px; font-family: var(--font-mono); font-size: clamp(0.85rem, 1.5vw, 1rem);
+            background: transparent; color: #888; border: none; cursor: pointer; transition: 0.3s; border-radius: 2px;
+        }
+        .toggle-btn.active { background: var(--cyan-dim); color: var(--cyan); font-weight: bold; box-shadow: 0 0 10px var(--cyan-dim); }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-family: var(--font-mono); color: #aaa; font-size: 0.85rem; margin-bottom: 8px; letter-spacing: 1px; }
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper input {
+            width: 100%; background: #0a0b10; border: 1px solid #444; color: white; 
+            padding: 15px; font-family: var(--font-mono); font-size: 1.1rem; border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+        .input-wrapper input:focus { border-color: var(--cyan); box-shadow: 0 0 10px var(--cyan-dim); }
+        .input-wrapper input:disabled { background: #1a1a1a; color: #555; cursor: not-allowed; }
+        .currency-tag { position: absolute; right: 15px; color: #666; font-family: var(--font-mono); font-weight: bold; pointer-events: none;}
+
+        .action-buttons { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 30px; }
+        .trade-btn {
+            flex: 1; min-width: 120px; padding: 18px; font-size: clamp(1rem, 1.8vw, 1.3rem); 
+            font-family: var(--font-mono); font-weight: bold; text-transform: uppercase; 
+            letter-spacing: 2px; border-radius: 4px; cursor: pointer; transition: all 0.2s; 
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .buy-btn { background: rgba(0, 255, 136, 0.1); border: 1px solid var(--success); color: var(--success); }
+        .buy-btn:hover { background: var(--success); color: black; box-shadow: 0 0 20px var(--success); transform: translateY(-2px); }
+        .buy-btn:active { transform: translateY(2px) scale(0.98); }
+
+        .sell-btn { background: rgba(255, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); }
+        .sell-btn:hover { background: var(--danger); color: white; box-shadow: 0 0 20px var(--danger); transform: translateY(-2px); }
+        .sell-btn:active { transform: translateY(2px) scale(0.98); }
+
+        .manifesto-section { border-left: 3px solid var(--cyan); padding-left: 20px; margin-top: 10px; }
+        .manifesto-section h3 { font-family: var(--font-mono); color: var(--cyan); text-transform: uppercase; letter-spacing: 2px; margin-top: 0; font-size: 1.3rem; }
+        .manifesto-section p { color: #aaa; line-height: 1.8; font-size: 1rem; margin-bottom: 15px; }
+        .highlight-text { color: white; font-weight: bold; font-family: var(--font-mono); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: clamp(0.8rem, 1.5vw, 0.95rem); }
+        .data-table th { text-align: left; padding: 12px 10px; color: #888; border-bottom: 1px solid #333; text-transform: uppercase; letter-spacing: 1px; }
+        .data-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #ddd; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .profit { color: var(--success); }
+        .loss { color: var(--danger); }
+        .neutral { color: #aaa; }
+        .scrollable-box { max-height: 250px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--cyan-dim) transparent; }
+        .scrollable-box::-webkit-scrollbar { width: 6px; }
+        .scrollable-box::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; height: 100dvh; 
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+            z-index: 6000; display: none; align-items: center; justify-content: center;
+            padding: max(15px, env(safe-area-inset-top));
+        }
+        .modal.active { display: flex; }
+        .modal-box { 
+            background: #0a0b10; padding: clamp(20px, 4vw, 35px); border-radius: 6px; 
+            border: 1px solid var(--cyan); width: 100%; max-width: 450px; text-align: center;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.15);
+        }
+        
+        .spinner { 
+            width: 50px; height: 50px; border: 3px solid var(--cyan-dim); 
+            border-top: 3px solid var(--cyan); border-radius: 50%; 
+            animation: spin 0.8s linear infinite; margin: 0 auto 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .alert-btn { 
+            width: 100%; padding: 12px; margin-top: 15px; border: 1px solid var(--cyan); 
+            background: rgba(0, 242, 255, 0.1); color: var(--cyan); 
+            cursor: pointer; text-transform: uppercase; font-size: 0.95rem; 
+            letter-spacing: 1px; font-family: var(--font-mono); border-radius: 4px; transition: 0.3s;
+        }
+        .alert-btn:hover { background: var(--cyan); color: black; box-shadow: 0 0 15px var(--cyan); }
+
+        footer.site-footer { background: #020203; border-top: 1px solid var(--glass-border); padding: 50px 20px 20px; margin-top: auto; font-family: var(--font-mono); width: 100%; }
+        .footer-content { width: 95%; max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 40px; }
+        .footer-col h4 { color: white; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; font-size: clamp(1rem, 2vw, 1.1rem); border-bottom: 1px solid var(--cyan-dim); padding-bottom: 10px;}
+        .footer-links a { display: flex; align-items: center; gap: 10px; color: #777; text-decoration: none; margin-bottom: 12px; transition: color 0.2s; font-size: clamp(0.85rem, 2vw, 0.95rem); min-height: 24px; }
+        .footer-links a:hover { color: var(--cyan); text-shadow: 0 0 5px var(--cyan-dim); }
+        .footer-bottom { text-align: center; margin-top: 50px; padding-top: 25px; border-top: 1px solid #111; color: #444; font-size: clamp(0.75rem, 1.5vw, 0.85rem); display: flex; flex-direction: column; gap: 12px; align-items: center; }
+
+        .toast-notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: black; padding: 15px 25px; font-family: var(--font-mono); font-weight: bold; border-radius: 4px; z-index: 9999; box-shadow: 0 0 20px var(--success); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .toast-notification.show { opacity: 1; }
+
+        /* --- NEW: MOBILE RESPONSIVENESS UPGRADE --- */
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .nav-left-group { width: 100%; justify-content: space-between; }
+        }
+        @media (max-width: 768px) {
+            .market-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .market-stats { width: 100%; justify-content: space-between; gap: 10px; }
+            .action-buttons { flex-direction: column; }
+            .trade-btn { width: 100%; }
+        }
+    </style>
+</head>
+<body class="crt-active">
+
+<div class="vignette-overlay"></div>
+<div id="fixed-bg"></div>
+<div id="nexus-toast-container" class="toast-notification"></div>
+
+<header>
+    <nav>
+        <div class="nav-left-group">
+            <div class="logo" onclick="window.location.href='index.html'">
+                <i class="fas fa-atom"></i>
+                <span>SCIENTIFIC NEXUS</span>
+            </div>
+            <div class="system-switcher">
+                <a href="index.html">[ SIMULATIONS ]</a>
+                <span class="divider">|</span>
+                <span class="active">[ SYRPTS ]</span>
+            </div>
+        </div>
+        <div class="balance-hud" onclick="initiateTransferSequence()">
+            <span class="balance-label">BALANCE:</span>
+            <span class="balance-value" id="hud-balance">0.00 SYR</span>
+        </div>
+    </nav>
+</header>
+
+<main id="app-content">
+    <div class="hero-title">
+        <h1>Syrpts Terminal</h1>
+        <p>Decentralized Asset Protocol</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="left-col">
+            <div class="glass-panel main-panel">
+                <div class="market-header">
+                    <h2 class="asset-name"><i class="fas fa-coins" style="color:var(--gold);"></i> SYRPTS <span style="font-size: 1rem; color:#666;">(SilverCash)</span></h2>
+                    <div class="market-stats">
+                        <div class="stat-box">
+                            <span class="stat-label">Market Cap (Circulating)</span>
+                            <span class="stat-value" id="display-market-cap">$3,000,000,000.00</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Current Price</span>
+                            <span class="stat-value price" id="display-price">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container" id="main-chart-container">
+                    <canvas id="price-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-panel">
+                <h3 class="panel-title"><i class="fas fa-briefcase"></i> Positions</h3>
+                <div class="scrollable-box">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Quantity</th>
+                                <th>Avg. Price</th>
+                                <th>Unrealized P/L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positions-body">
+                            <tr><td colspan="4" style="text-align:center; color:#666;">No active positions.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-col">
+            <div class="glass-panel action-panel" id="action-panel">
+                <h3 class="panel-title"><i class="fas fa-terminal"></i> Execute Order</h3>
+                
+                <div class="order-toggle">
+                    <button class="toggle-btn active" id="btn-market" onclick="setOrderType('MARKET')">MARKET</button>
+                    <button class="toggle-btn" id="btn-limit" onclick="setOrderType('LIMIT')">LIMIT</button>
+                </div>
+
+                <div class="input-group">
+                    <label>QUANTITY</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="input-qty" placeholder="0.00" min="0" step="0.01">
+                        <span class="currency-tag">SYRPTS</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>LIMIT PRICE (USD)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="input-limit" placeholder="Market Execution" disabled min="0" step="0.000001">
+                        <span class="currency-tag">USD</span>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="trade-btn buy-btn" onclick="executeOrder('BUY')">
+                        <i class="fas fa-arrow-up"></i> BUY
+                    </button>
+                    <button class="trade-btn sell-btn" onclick="executeOrder('SELL')">
+                        <i class="fas fa-arrow-down"></i> SELL
+                    </button>
+                </div>
+
+                <div class="manifesto-section">
+                    <h3>The Engineer Manifesto</h3>
+                    <p>
+                        Engineers spend <span class="highlight-text">months on sites with no return</span>.
+                        The traditional model relies on donations, which are functionally <span class="highlight-text">one-way transactions</span> where the supporter receives nothing of financial value in return.
+                    </p>
+                    <p>
+                        <span class="highlight-text">Syrpts (SilverCash)</span> restructures this paradigm.
+                        By creating a decentralized asset system, Syrpts allows creators to hold supply and investors to buy in. 
+                    </p>
+                    <p>
+                        When you back an engineer via Syrpts, you aren't just donating—you are acquiring an asset.
+                        It turns support into a <span class="highlight-text">growing asset for both creator and investor</span>, aligning incentives and driving sustainable technological development.
+                    </p>
+                </div>
+            </div>
+
+            <div class="glass-panel">
+                <h3 class="panel-title"><i class="fas fa-list"></i> Open Orders</h3>
+                <div class="scrollable-box">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="open-orders-body">
+                            <tr><td colspan="4" style="text-align:center; color:#666;">No open orders.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="escrow-modal" class="modal">
+    <div class="modal-box">
+        <div class="spinner"></div>
+        <h3 style="color:var(--cyan); font-family:var(--font-mono); margin-bottom: 10px;">ESCROW BRIDGE ACTIVE</h3>
+        <p style="color:#aaa; font-family:var(--font-mono); font-size:0.9rem;">Awaiting verification from Web3 bridge protocol. Attempting deep link to SilverWallet...</p>
+    </div>
+</div>
+
+<div id="apk-modal" class="modal">
+    <div class="modal-box" style="border-color: var(--danger);">
+        <i class="fas fa-exclamation-triangle fa-3x" style="color:var(--danger); margin-bottom: 20px;"></i>
+        <h3 style="color:var(--danger); font-family:var(--font-mono); margin-bottom: 10px;">SYNC FAILURE</h3>
+        <p style="color:#aaa; font-family:var(--font-mono); font-size:0.9rem; line-height: 1.5;">SilverWallet APK not detected on local device. Syncing required to verify transactions and hold assets.</p>
+        <button class="alert-btn" onclick="downloadAPK()">INSTALL SILVERWALLET NOW</button>
+        <button class="alert-btn" style="background:transparent; border-color:#555; color:#aaa; margin-top:10px;" onclick="closeModal('apk-modal')">ABORT</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, writeBatch, increment, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCrgwoD_IVwlyvUQwDDQj6T772obSOL8So",
+        authDomain: "scientificnexus-65c48.firebaseapp.com",
+        projectId: "scientificnexus-65c48",
+        storageBucket: "scientificnexus-65c48.firebasestorage.app",
+        messagingSenderId: "125907587809",
+        appId: "1:125907587809:web:d8068604db659fa357dda0",
+        measurementId: "G-787GN5V4WT"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let currentUser = null;
+    let localSyrptsBalance = 0;
+
+    const canvas = document.getElementById('price-chart');
+    const ctx = canvas.getContext('2d');
+    const priceDisplay = document.getElementById('display-price');
+    const marketCapDisplay = document.getElementById('display-market-cap');
+
+    let width, height;
+    const dataPoints = 80;
+    let priceHistory = Array(dataPoints).fill(0.00);
+    
+    // Upgraded: Starting point is now $0.00 as requested
+    let currentActualPrice = 0.00; 
+    let targetPrice = 0.00;
+    let globalMarketCap = 3000000000;
+    let trendColor = "#00ff88"; 
+    
+    let orderType = 'MARKET';
+    let positions = [];
+    let openOrders = [];
+
+    onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if(user) {
+            onSnapshot(doc(db, "users", user.uid), (snap) => {
+                if(snap.exists() && snap.data().syrptsBalance) {
+                    localSyrptsBalance = snap.data().syrptsBalance;
+                    document.getElementById('hud-balance').innerText = `${localSyrptsBalance.toFixed(2)} SYR`;
+                }
+            });
+        }
+    });
+
+    onSnapshot(doc(db, "market", "syrpts_global"), (snap) => {
+        if(snap.exists()) {
+            const data = snap.data();
+            if(data.price) targetPrice = data.price;
+            if(data.marketCap) globalMarketCap = data.marketCap;
+            
+            marketCapDisplay.innerText = `$${globalMarketCap.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+    });
+
+    function resizeCanvas() {
+        width = canvas.parentElement.clientWidth;
+        height = canvas.parentElement.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function formatPrice(num) {
+        if (num === 0) return "$0.00";
+        if (num < 0.01) return "$" + num.toFixed(6);
+        if (num < 1) return "$" + num.toFixed(4);
+        return "$" + num.toFixed(2);
+    }
+
+    window.showToast = function(msg, isError = false) {
+        const toast = document.getElementById('nexus-toast-container');
+        toast.innerText = `[${isError ? 'SYSTEM' : 'SUCCESS'}] ${msg}`;
+        toast.style.background = isError ? 'var(--danger)' : 'var(--success)';
+        toast.style.color = isError ? 'white' : 'black';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function drawChart() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < width; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, height); }
+        for (let i = 0; i < height; i += 50) { ctx.moveTo(0, i); ctx.lineTo(width, i); }
+        ctx.stroke();
+
+        let minPrice = Math.min(...priceHistory);
+        let maxPrice = Math.max(...priceHistory);
+        const range = maxPrice - minPrice || 0.000010; 
+        const chartMin = Math.max(0, minPrice - (range * 0.1));
+        const chartMax = maxPrice + (range * 0.2);
+
+        const stepX = width / (dataPoints - 1);
+        const points = priceHistory.map((val, index) => {
+            const x = index * stepX;
+            const y = height - ((val - chartMin) / (chartMax - chartMin)) * height;
+            return {x, y};
+        });
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        if (trendColor === "#00ff88") {
+            gradient.addColorStop(0, "rgba(0, 255, 136, 0.4)");
+            gradient.addColorStop(1, "rgba(0, 255, 136, 0.0)");
+        } else {
+            gradient.addColorStop(0, "rgba(255, 68, 68, 0.4)");
+            gradient.addColorStop(1, "rgba(255, 68, 68, 0.0)");
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, height);
+        points.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineTo(points[points.length - 1].x, height);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        points.forEach(p => ctx.lineTo(p.x, p.y));
+        
+        ctx.strokeStyle = trendColor; 
+        ctx.lineWidth = 3;
+        ctx.shadowColor = trendColor;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        const lastPoint = points[points.length - 1];
+        ctx.beginPath();
+        ctx.arc(lastPoint.x, lastPoint.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.strokeStyle = trendColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    setInterval(() => {
+        currentActualPrice += (targetPrice - currentActualPrice) * 0.08;
+        let noiseScale = currentActualPrice > 0 ? (currentActualPrice * 0.015) : 0;
+        let noise = (Math.random() - 0.5) * noiseScale;
+        
+        let displayTick = currentActualPrice + noise;
+        if (displayTick < 0) displayTick = 0;
+
+        priceHistory.shift();
+        priceHistory.push(displayTick);
+
+        if (targetPrice > currentActualPrice + 0.000001) {
+            trendColor = "#00ff88";
+            priceDisplay.style.color = "var(--success)";
+            priceDisplay.style.textShadow = "0 0 15px rgba(0, 255, 136, 0.4)";
+        } else if (targetPrice < currentActualPrice - 0.000001) {
+            trendColor = "#ff4444";
+            priceDisplay.style.color = "var(--danger)";
+            priceDisplay.style.textShadow = "0 0 15px rgba(255, 68, 68, 0.4)";
+        }
+
+        priceDisplay.innerText = formatPrice(displayTick);
+        drawChart();
+        updatePositionsUI(); 
+    }, 150);
+
+    window.setOrderType = function(type) {
+        orderType = type;
+        document.getElementById('btn-market').classList.toggle('active', type === 'MARKET');
+        document.getElementById('btn-limit').classList.toggle('active', type === 'LIMIT');
+        
+        const limitInput = document.getElementById('input-limit');
+        if(type === 'MARKET') {
+            limitInput.disabled = true;
+            limitInput.value = '';
+            limitInput.placeholder = 'Market Execution';
+        } else {
+            limitInput.disabled = false;
+            limitInput.placeholder = '0.000000';
+            limitInput.value = formatPrice(currentActualPrice).replace('$', '');
+        }
+    };
+
+    window.executeOrder = async function(action) {
+        if(!currentUser) { showToast("Authentication Required.", true); return; }
+        
+        const qty = parseFloat(document.getElementById('input-qty').value) || 0;
+        const limitPrice = parseFloat(document.getElementById('input-limit').value) || 0;
+
+        if (qty <= 0) { showToast("Enter a valid quantity.", true); return; }
+
+        if (orderType === 'LIMIT') {
+            openOrders.push({ type: action, size: qty, price: limitPrice, status: 'Open' });
+            updateOpenOrdersUI();
+            showToast(`${action} LIMIT ORDER LOGGED.`);
+        } else {
+            const batch = writeBatch(db);
+            const txRef = doc(collection(db, "users", currentUser.uid, "transactions"));
+            const userRef = doc(db, "users", currentUser.uid);
+            
+            const balanceChange = action === 'BUY' ? qty : -qty;
+            if(action === 'SELL' && localSyrptsBalance < qty) {
+                showToast("Insufficient Balance.", true); return;
+            }
+
+            batch.set(txRef, {
+                type: action,
+                amount: qty,
+                executionPrice: currentActualPrice,
+                timestamp: serverTimestamp()
+            });
+            batch.update(userRef, { syrptsBalance: increment(balanceChange) });
+            
+            mockExecuteTrade(action, qty, currentActualPrice);
+            
+            try {
+                await batch.commit();
+                showToast(`${action} MARKET ORDER TRANSMITTED.`);
+
+                // --- NEW: SYNC WITH SILVERWALLET APK PROTOCOL ---
+                const txnId = "TXN-" + Math.floor(Date.now() / 1000);
+                const deepLink = `datachain://transaction?action=${action}&amount=${qty}&asset=SYRPTS&type=MARKET&txnId=${txnId}`;
+                
+                showToast(`REDIRECTING TO SILVERWALLET FOR VERIFICATION...`, false);
+                
+                // Attempt to push the user to the APK after a brief pause
+                setTimeout(() => {
+                    window.location.href = deepLink;
+                }, 1500);
+                // -------------------------------------------------
+
+            } catch(e) {
+                showToast("Transaction Network Error.", true);
+                console.error(e);
+            }
+        }
+
+        const container = document.getElementById('main-chart-container');
+        const color = action === 'BUY' ? 'var(--success)' : 'var(--danger)';
+        document.getElementById('action-panel').style.borderColor = color;
+        container.style.boxShadow = `inset 0 0 50px ${color.replace(')', ', 0.5)').replace('var(--', 'rgba(')}, 0 0 30px ${color.replace(')', ', 0.4)').replace('var(--', 'rgba(')}`;
+        setTimeout(() => container.style.boxShadow = "none", 500);
+    };
+
+    function mockExecuteTrade(action, qty, priceExecuted) {
+        let existing = positions.find(p => p.asset === 'SYRPTS');
+        if (action === 'BUY') {
+            if (existing) {
+                let totalCost = (existing.qty * existing.avgPrice) + (qty * priceExecuted);
+                existing.qty += qty;
+                existing.avgPrice = totalCost / existing.qty;
+            } else {
+                positions.push({ asset: 'SYRPTS', qty: qty, avgPrice: priceExecuted });
+            }
+        } else if (action === 'SELL' && existing) {
+            existing.qty -= qty;
+            if (existing.qty <= 0) positions = positions.filter(p => p.asset !== 'SYRPTS');
+        }
+        updatePositionsUI();
+    }
+
+    function updatePositionsUI() {
+        const tbody = document.getElementById('positions-body');
+        if (positions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">No active positions.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        positions.forEach(p => {
+            let currentVal = p.qty * currentActualPrice;
+            let costBasis = p.qty * p.avgPrice;
+            let pl = currentVal - costBasis;
+            let plClass = pl > 0 ? 'profit' : (pl < 0 ? 'loss' : 'neutral');
+            let plSign = pl > 0 ? '+' : '';
+
+            html += `<tr>
+                <td style="font-weight:bold; color:white;">${p.asset}</td>
+                <td>${p.qty.toFixed(2)}</td>
+                <td>${formatPrice(p.avgPrice)}</td>
+                <td class="${plClass}">${plSign}${formatPrice(pl)}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function updateOpenOrdersUI() {
+        const tbody = document.getElementById('open-orders-body');
+        if (openOrders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">No open orders.</td></tr>';
+            return;
+        }
+        let html = '';
+        openOrders.forEach(o => {
+            let typeColor = o.type === 'BUY' ? 'var(--success)' : 'var(--danger)';
+            html += `<tr>
+                <td style="color:${typeColor}; font-weight:bold;">${o.type} LIMIT</td>
+                <td>${o.size}</td>
+                <td>${formatPrice(o.price)}</td>
+                <td style="color:var(--cyan);">${o.status}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    window.closeModal = function(id) { document.getElementById(id).classList.remove('active'); };
+    
+    // Upgraded: Protocol perfectly matches your main.dart AppLinks listener
+    window.initiateTransferSequence = function() {
+        if(!currentUser) { showToast("Auth Required to Bridge.", true); return; }
+        
+        document.getElementById('escrow-modal').classList.add('active');
+        
+        const deepLink = `datachain://transaction?action=TRANSFER&amount=${localSyrptsBalance}&asset=SYRPTS&type=MARKET`;
+        window.location.href = deepLink;
+
+        setTimeout(() => {
+            document.getElementById('escrow-modal').classList.remove('active');
+            
+            if(document.hasFocus()) {
+                document.getElementById('apk-modal').classList.add('active');
+            }
+        }, 2500);
+    };
+
+    window.downloadAPK = function() {
+        window.location.href = "https://github.com/scientificnexussite/ScientificNexusSite/releases/download/v1.0.0/SilverWallet.apk";
+        closeModal('apk-modal');
+        showToast("INITIATING DOWNLOAD PROTOCOL...");
+    };
+
+    drawChart();
+</script>
+</body>
+</html>
