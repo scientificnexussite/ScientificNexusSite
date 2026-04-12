@@ -1,0 +1,142 @@
+{
+  "name": "Scientific Nexus Terminal",
+  "short_name": "Nexus",
+  "description": "High-fidelity physics simulations, cognitive yield testing, strategic games, and advanced research modules — all inside the Nexus Research Terminal.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "background_color": "#050507",
+  "theme_color": "#050507",
+  "orientation": "any",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "education", "entertainment"],
+  "prefer_related_applications": false,
+
+  "icons": [
+    {
+      "src": "/assets/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Browse Simulations",
+      "short_name": "Simulations",
+      "description": "Open the main simulation and game directory.",
+      "url": "/?source=pwa-shortcut",
+      "icons": [{ "src": "/assets/icon-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Research Documentation",
+      "short_name": "Research",
+      "description": "Access all research and technical documentation modules.",
+      "url": "/research.html?source=pwa-shortcut",
+      "icons": [{ "src": "/assets/icon-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Global Feedback Hub",
+      "short_name": "Feedback",
+      "description": "Submit feedback and read community reviews.",
+      "url": "/Review.html?source=pwa-shortcut",
+      "icons": [{ "src": "/assets/icon-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "About Nexus",
+      "short_name": "About",
+      "description": "Learn about the Scientific Nexus project and the team behind it.",
+      "url": "/about.html?source=pwa-shortcut",
+      "icons": [{ "src": "/assets/icon-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ],
+
+  "screenshots": [
+    {
+      "src": "/assets/screenshots/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Scientific Nexus Terminal — Desktop view of the research hub and simulation grid"
+    },
+    {
+      "src": "/assets/screenshots/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Scientific Nexus Terminal — Mobile view of the simulation browser"
+    }
+  ],
+
+  "share_target": {
+    "action": "/Review.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+
+  "related_applications": [],
+  "iarc_rating_id": ""
+}
